@@ -1,5 +1,3 @@
----
-
 # Stockly 📈
 
 **Your personal gateway to smarter investing**
