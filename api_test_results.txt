@@ -1,0 +1,51 @@
+Finnhub API Test Results
+Timestamp: 2025-06-25T19:58:56.110463 UTC
+========================================
+
+--- Symbol: AAPL ---
+Request URL: https://finnhub.io/api/v1/quote?symbol=AAPL&token=YOUR_API_KEY_HIDDEN
+Status: Success (200 OK)
+Response Body (JSON):
+{
+  "c": 201.285,
+  "d": 0.985,
+  "dp": 0.4918,
+  "h": 203.67,
+  "l": 200.6201,
+  "o": 201.45,
+  "pc": 200.3,
+  "t": 1750881533
+}
+
+--- Symbol: ^GSPC ---
+Request URL: https://finnhub.io/api/v1/quote?symbol=^GSPC&token=YOUR_API_KEY_HIDDEN
+Status: Success (200 OK)
+Response Body (JSON):
+{
+  "error": "Market data subscription required for CFD indices."
+}
+
+--- Symbol: ^NDX ---
+Request URL: https://finnhub.io/api/v1/quote?symbol=^NDX&token=YOUR_API_KEY_HIDDEN
+Status: Success (200 OK)
+Response Body (JSON):
+{
+  "error": "Market data subscription required for CFD indices."
+}
+
+--- Symbol: ^DJI ---
+Request URL: https://finnhub.io/api/v1/quote?symbol=^DJI&token=YOUR_API_KEY_HIDDEN
+Status: Success (200 OK)
+Response Body (JSON):
+{
+  "error": "Market data subscription required for CFD indices."
+}
+
+--- Symbol: ^RUT ---
+Request URL: https://finnhub.io/api/v1/quote?symbol=^RUT&token=YOUR_API_KEY_HIDDEN
+Status: Success (200 OK)
+Response Body (JSON):
+{
+  "error": "Market data subscription required for CFD indices."
+}
+
