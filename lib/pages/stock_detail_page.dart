@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:async';
 import 'dart:math';
 
 import '../services/alpha_vantage_service.dart';
@@ -19,37 +20,72 @@ class StockDetailPage extends StatefulWidget {
 }
 
 class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProviderStateMixin {
-  late Future<Quote> _quoteFuture;
-  late Future<CompanyProfile> _profileFuture;
-  late Future<List<HistoricalDataPoint>> _historicalDataFuture;
-  
+  // Use state variables for live data
+  Quote? _quote;
+  CompanyProfile? _profile;
+  List<HistoricalDataPoint>? _historicalData;
+
+  Timer? _timer;
   late TabController _tabController;
-  String _selectedPeriod = '1Y'; // Default time period
+  String _selectedPeriod = '1Y';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _fetchData();
-  }
-
-  void _fetchData() {
-    _quoteFuture = AlphaVantageService.getQuote(widget.stockSymbol);
-    _profileFuture = AlphaVantageService.getCompanyProfile(widget.stockSymbol);
-    _historicalDataFuture = AlphaVantageService.getHistoricalData(widget.stockSymbol, _selectedPeriod);
-  }
-  
-  void _updatePeriod(String period) {
-    setState(() {
-      _selectedPeriod = period;
-      _historicalDataFuture = AlphaVantageService.getHistoricalData(widget.stockSymbol, _selectedPeriod);
-    });
+    _fetchAllData(); // Initial fetch
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) => _updateQuote());
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchAllData() async {
+    // Fetch all initial data concurrently
+    final results = await Future.wait([
+      AlphaVantageService.getQuote(widget.stockSymbol),
+      AlphaVantageService.getCompanyProfile(widget.stockSymbol),
+      AlphaVantageService.getHistoricalData(widget.stockSymbol, _selectedPeriod),
+    ]);
+    if (mounted) {
+      setState(() {
+        _quote = results[0] as Quote;
+        _profile = results[1] as CompanyProfile;
+        _historicalData = results[2] as List<HistoricalDataPoint>;
+      });
+       // Provide the initial price to the portfolio
+       Provider.of<PortfolioProvider>(context, listen: false)
+          .updateLivePrice(widget.stockSymbol, _quote!.currentPrice);
+    }
+  }
+
+  Future<void> _updateQuote() async {
+    final newQuote = await AlphaVantageService.getQuote(widget.stockSymbol);
+     if (mounted) {
+       setState(() {
+         _quote = newQuote;
+       });
+       // Also update the portfolio provider with the latest price
+       Provider.of<PortfolioProvider>(context, listen: false)
+          .updateLivePrice(widget.stockSymbol, newQuote.currentPrice);
+     }
+  }
+  
+  void _updatePeriod(String period) async {
+    setState(() {
+      _selectedPeriod = period;
+      _historicalData = null; // Show loading indicator for the chart
+    });
+    final newHistoricalData = await AlphaVantageService.getHistoricalData(widget.stockSymbol, _selectedPeriod);
+    if(mounted) {
+      setState(() {
+        _historicalData = newHistoricalData;
+      });
+    }
   }
 
   @override
@@ -59,45 +95,14 @@ class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProv
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.of(context).pop()),
         actions: [
-            IconButton(
-                icon: const Icon(Icons.add_chart_sharp, color: Colors.white), // "Add to Watchlist" icon
-                onPressed: () { 
-                     ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Watchlist functionality not yet implemented.')),
-                    );
-                },
-            )
+            IconButton(icon: const Icon(Icons.add_chart_sharp, color: Colors.white), onPressed: () {}),
         ],
       ),
-      body: FutureBuilder(
-        future: Future.wait([_quoteFuture, _profileFuture]),
-        builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.white));
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Error loading data: ${snapshot.error}", style: TextStyle(color: Colors.red)));
-          }
-          if (snapshot.data == null) {
-              return const Center(child: Text("Could not load data.", style: TextStyle(color: Colors.grey)));
-          }
-
-          final Quote quote = snapshot.data![0];
-          final CompanyProfile profile = snapshot.data![1];
-
-          if(quote.error != null || profile.symbol.isEmpty) {
-              final errorMessage = quote.error ?? "Data not available for this symbol.";
-              return Center(child: Text(errorMessage, style: TextStyle(color: Colors.grey), textAlign: TextAlign.center,));
-          }
-
-          return _buildPageContent(quote, profile);
-        },
-      ),
+      body: (_quote == null || _profile == null)
+        ? const Center(child: CircularProgressIndicator(color: Colors.white))
+        : _buildPageContent(_quote!, _profile!),
     );
   }
 
@@ -155,29 +160,24 @@ class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProv
   }
   
   Widget _buildChart() {
-    return FutureBuilder<List<HistoricalDataPoint>>(
-      future: _historicalDataFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(height: 200, child: const Center(child: CircularProgressIndicator(color: Colors.white)));
-        }
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          return Container(height: 200, child: Center(child: Text("Chart data unavailable.", style: TextStyle(color: Colors.grey))));
-        }
-        
-        final dataPoints = snapshot.data!;
-        final minVal = dataPoints.map((p) => p.close).reduce(min);
-        final maxVal = dataPoints.map((p) => p.close).reduce(max);
-
-        List<Color> gradientColors = [];
-        List<double> stops = [];
-        for (int i = 0; i < dataPoints.length; i++) {
-          final isUp = i > 0 ? dataPoints[i].close >= dataPoints[i-1].close : true;
-          gradientColors.add(isUp ? Colors.green : Colors.red);
-          stops.add(i / (dataPoints.length - 1));
-        }
-
-        return Container(
+     if (_historicalData == null) {
+        return Container(height: 200, child: const Center(child: CircularProgressIndicator(color: Colors.white)));
+      }
+      if (_historicalData!.isEmpty) {
+        return Container(height: 200, child: Center(child: Text("Chart data unavailable.", style: TextStyle(color: Colors.grey))));
+      }
+      
+      final dataPoints = _historicalData!;
+      final minVal = dataPoints.map((p) => p.close).reduce(min);
+      final maxVal = dataPoints.map((p) => p.close).reduce(max);
+      List<Color> gradientColors = [];
+      List<double> stops = [];
+      for (int i = 0; i < dataPoints.length; i++) {
+        final isUp = i > 0 ? dataPoints[i].close >= dataPoints[i-1].close : true;
+        gradientColors.add(isUp ? Colors.green : Colors.red);
+        stops.add(i / (dataPoints.length - 1));
+      }
+      return Container(
           height: 200,
           child: LineChart(
             LineChartData(
@@ -209,7 +209,6 @@ class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProv
               lineTouchData: LineTouchData(
                 handleBuiltInTouches: true,
                 touchTooltipData: LineTouchTooltipData(
-                  // CORRECTED PARAMETER
                   getTooltipColor: (touchedSpot) => Colors.blueGrey.withOpacity(0.8),
                   getTooltipItems: (List<LineBarSpot> touchedSpots) {
                     return touchedSpots.map((barSpot) {
@@ -241,8 +240,6 @@ class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProv
             ),
           ),
         );
-      },
-    );
   }
 
   Widget _buildTimePeriodSelector() {
@@ -298,7 +295,7 @@ class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProv
   }
 
   Widget _buildOverviewTab(CompanyProfile profile, Quote quote) {
-    return SingleChildScrollView(
+     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,49 +311,27 @@ class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProv
   }
 
   Widget _buildHoldingsTab(Quote quote) {
-    return Consumer<PortfolioProvider>(
-      builder: (context, portfolio, child) {
-        final holding = portfolio.holdings.firstWhere(
-          (h) => h.symbol == widget.stockSymbol,
-          orElse: () => Holding(symbol: widget.stockSymbol, shares: 0, avgCost: 0),
-        );
-        final marketValue = holding.shares * quote.currentPrice;
-        final totalGain = (holding.shares > 0) ? marketValue - (holding.shares * holding.avgCost) : 0.0;
-
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              _buildMetricCard("Shares Owned", holding.shares.toStringAsFixed(2)),
-              const SizedBox(height: 16),
-              _buildMetricCard("Average Cost", "\$${holding.avgCost.toStringAsFixed(2)}"),
-              const SizedBox(height: 16),
-              _buildMetricCard("Market Value", "\$${marketValue.toStringAsFixed(2)}"),
-              const SizedBox(height: 16),
-              _buildMetricCard("Total Gain / Loss", "\$${totalGain.toStringAsFixed(2)}", valueColor: totalGain >= 0 ? Colors.green : Colors.red),
-              const Spacer(),
-              _buildActionButtons(quote),
-            ],
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: Text('Your detailed holdings will be displayed here.', style: TextStyle(color: Colors.grey)),
+            ),
           ),
-        );
-      },
+          _buildActionButtons(quote),
+        ],
+      ),
     );
   }
 
   Widget _buildPerformanceTab(CompanyProfile profile) {
-    return Padding(
-       padding: const EdgeInsets.all(20.0),
-       child: Column(
-         children: [
-           _buildMetricCard("52 Week High", "\$${profile.high52.toStringAsFixed(2)}"),
-           const SizedBox(height: 16),
-           _buildMetricCard("52 Week Low", "\$${profile.low52.toStringAsFixed(2)}"),
-           const SizedBox(height: 16),
-           _buildMetricCard("P/E Ratio", profile.peRatio.toStringAsFixed(2)),
-            const SizedBox(height: 16),
-           _buildMetricCard("Market Cap", "\$${profile.marketCap.toStringAsFixed(2)}B"),
-         ],
-       ),
+    return const Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Text('Detailed performance metrics will be displayed here.', style: TextStyle(color: Colors.grey)),
+      ),
     );
   }
   
@@ -373,24 +348,6 @@ class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProv
           Text(title, style: TextStyle(color: titleColor, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(content, style: TextStyle(color: Colors.grey[300], height: 1.5)),
-        ],
-      ),
-    );
-  }
-  
-   Widget _buildMetricCard(String title, String value, {Color valueColor = Colors.white}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TextStyle(color: Colors.grey[400], fontSize: 14)),
-          const SizedBox(height: 4),
-          Text(value, style: TextStyle(color: valueColor, fontSize: 20, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -425,7 +382,6 @@ class _StockDetailPageState extends State<StockDetailPage> with SingleTickerProv
   void _showTradeDialog(BuildContext context, {required bool isBuy, required Quote quote}) {
     final TextEditingController controller = TextEditingController();
     final portfolio = Provider.of<PortfolioProvider>(context, listen: false);
-
     showDialog(
       context: context,
       builder: (context) {

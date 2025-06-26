@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-// UPDATED: Using relative paths for more robust importing.
-import 'pages/home_page.dart'; 
-import 'providers/portfolio_provider.dart';
+import 'pages/home_page.dart';
+import 'providers/portfolio_provider.dart'; // Import the new provider
 
 void main() {
   runApp(
-    // The ChangeNotiferProvider makes the PortfolioProvider
-    // available to all widgets in the app.
+    // Wrap the entire app in a ChangeNotifierProvider
     ChangeNotifierProvider(
       create: (context) => PortfolioProvider(),
       child: const MyApp(),
@@ -26,12 +23,9 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: Colors.black,
-        scaffoldBackgroundColor: Colors.black, // Ensures a consistent black background
       ),
-      // This line will now work correctly
-      home: const HomePage(), 
+      home: const HomePage(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
-

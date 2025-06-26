@@ -3,9 +3,18 @@ import '../models/quote_model.dart';
 import '../models/company_profile_model.dart';
 import '../models/historical_data_model.dart';
 
+// NEW: Enum to define the stock's long-term behavior
+enum StockTrajectory { stable, up, down }
+
 /// A fake implementation of the AlphaVantageService that generates
 /// seeded, believable random data for demonstration and development purposes.
+/// This version simulates live price updates with pre-defined trajectories.
 class AlphaVantageService {
+
+  // Stores the last known price to create realistic fluctuations.
+  static final Map<String, double> _currentPrices = {};
+  // NEW: Stores the assigned trajectory for each stock.
+  static final Map<String, StockTrajectory> _stockTrajectories = {};
 
   static final Map<String, CompanyProfile> _mockProfiles = {
     'AAPL': CompanyProfile(symbol: 'AAPL', name: 'Apple Inc.', description: 'A technology company that designs, manufactures, and markets mobile communication and media devices, personal computers, and portable digital music players.', industry: 'Technology', marketCap: 3200.0, peRatio: 32.5, dividendYield: 0.5, high52: 220.50, low52: 165.21, beta: '1.29'),
@@ -20,38 +29,69 @@ class AlphaVantageService {
     'BTC-USD': CompanyProfile(symbol: 'BTC-USD', name: 'Bitcoin', description: 'A decentralized digital currency that can be transferred on the peer-to-peer bitcoin network.', industry: 'Cryptocurrency', marketCap: 1200.0, peRatio: 0.0, dividendYield: 0.0, high52: 73750.07, low52: 24900.0, beta: 'N/A'),
   };
 
-  /// Helper to round a double to a specific number of decimal places.
   static double _roundDouble(double val, int places) {
     double mod = pow(10.0, places).toDouble();
     return ((val * mod).round().toDouble() / mod);
   }
 
-  static Future<Quote> getQuote(String symbol) async {
-    final random = Random(symbol.hashCode);
-    
-    final basePrice = 50 + random.nextDouble() * 450;
-    final prevClose = basePrice * (1 + (random.nextDouble() - 0.5) * 0.1);
-    final change = basePrice - prevClose;
-    final percentChange = (change / prevClose) * 100;
+  // NEW: Assigns a trajectory to a stock if it doesn't have one.
+  static void _assignTrajectory(String symbol) {
+    if (!_stockTrajectories.containsKey(symbol)) {
+      final seedRandom = Random(symbol.hashCode);
+      final trajectoryIndex = seedRandom.nextInt(StockTrajectory.values.length);
+      _stockTrajectories[symbol] = StockTrajectory.values[trajectoryIndex];
+    }
+  }
 
-    await Future.delayed(Duration(milliseconds: 300 + random.nextInt(400)));
+  static Future<Quote> getQuote(String symbol) async {
+    final random = Random();
+    
+    _assignTrajectory(symbol); // Ensure trajectory is assigned
+    
+    if (!_currentPrices.containsKey(symbol)) {
+        final seedRandom = Random(symbol.hashCode);
+        _currentPrices[symbol] = 50 + seedRandom.nextDouble() * 450;
+    }
+    
+    double lastPrice = _currentPrices[symbol]!;
+    
+    // NEW: Adjust price based on trajectory
+    double bias = 0.0;
+    switch (_stockTrajectories[symbol]!) {
+      case StockTrajectory.up:
+        bias = 0.0005; // Gentle upward drift
+        break;
+      case StockTrajectory.down:
+        bias = -0.0005; // Gentle downward drift
+        break;
+      case StockTrajectory.stable:
+        bias = 0.0;
+        break;
+    }
+    
+    double changePercent = (random.nextDouble() - 0.5) * 0.005 + bias; // Smaller, more realistic ticks
+    double newPrice = lastPrice * (1 + changePercent);
+    
+    _currentPrices[symbol] = newPrice;
+    
+    final change = newPrice - lastPrice;
+
+    await Future.delayed(Duration(milliseconds: 50 + random.nextInt(100)));
 
     return Quote(
       symbol: symbol,
-      openPrice: _roundDouble(basePrice * (1 + (random.nextDouble() - 0.5) * 0.02), 2),
-      highPrice: _roundDouble(basePrice * 1.02, 2),
-      lowPrice: _roundDouble(basePrice * 0.98, 2),
-      currentPrice: _roundDouble(basePrice, 2),
-      previousClose: _roundDouble(prevClose, 2),
+      openPrice: _roundDouble(newPrice * (1 + (random.nextDouble() - 0.5) * 0.02), 2),
+      highPrice: _roundDouble(newPrice * 1.02, 2),
+      lowPrice: _roundDouble(newPrice * 0.98, 2),
+      currentPrice: _roundDouble(newPrice, 2),
+      previousClose: _roundDouble(lastPrice, 2),
       change: _roundDouble(change, 2),
-      percentChange: _roundDouble(percentChange, 2),
+      percentChange: _roundDouble(changePercent * 100, 2),
     );
   }
 
   static Future<CompanyProfile> getCompanyProfile(String symbol) async {
-    final random = Random(symbol.hashCode);
-    await Future.delayed(Duration(milliseconds: 200 + random.nextInt(300)));
-    
+    await Future.delayed(Duration(milliseconds: 200));
     if (_mockProfiles.containsKey(symbol)) {
       return _mockProfiles[symbol]!;
     }
@@ -61,6 +101,8 @@ class AlphaVantageService {
   static Future<List<HistoricalDataPoint>> getHistoricalData(String symbol, String period) async {
     final random = Random(symbol.hashCode);
     
+    _assignTrajectory(symbol); // Ensure trajectory is assigned for historical data too
+
     int numDataPoints;
     Duration timeStep;
 
@@ -74,12 +116,26 @@ class AlphaVantageService {
       default: numDataPoints = 52; timeStep = Duration(days: 7); break;
     }
 
+    // NEW: Adjust historical data based on trajectory
+    double bias = 0.0;
+    switch (_stockTrajectories[symbol]!) {
+      case StockTrajectory.up:
+        bias = -0.45; // Skewed positive
+        break;
+      case StockTrajectory.down:
+        bias = -0.55; // Skewed negative
+        break;
+      case StockTrajectory.stable:
+        bias = -0.5; // Centered
+        break;
+    }
+
     List<HistoricalDataPoint> points = [];
     double lastClose = 50 + random.nextDouble() * 450;
     final now = DateTime.now();
 
     for (int i = 0; i < numDataPoints; i++) {
-      double change = (random.nextDouble() - 0.48) * (lastClose * 0.05);
+      double change = (random.nextDouble() + bias) * (lastClose * 0.05); // Use the bias
       double open = lastClose;
       double close = open + change;
       double high = max(open, close) * (1 + random.nextDouble() * 0.02);
@@ -98,7 +154,7 @@ class AlphaVantageService {
       lastClose = close;
     }
     
-    await Future.delayed(Duration(milliseconds: 500 + random.nextInt(500)));
+    await Future.delayed(Duration(milliseconds: 500));
     
     return points;
   }

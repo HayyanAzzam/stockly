@@ -33,7 +33,8 @@ dependencies:
   flutter_feather_icons: ^2.0.0 
   http: ^1.2.1
   provider: ^6.1.2  # For portfolio state management
-  fl_chart: ^0.68.0 # For the stock chart
+  fl_chart: ^1.0.0 # For the stock chart
+  path_provider: ^2.1.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -48,7 +49,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
