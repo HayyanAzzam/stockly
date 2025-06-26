@@ -25,16 +25,19 @@ class PortfolioProvider with ChangeNotifier {
   List<Holding> _holdings = [];
   final PortfolioStorageService _storageService = PortfolioStorageService();
   
+  // Stores the latest price for each owned stock.
   final Map<String, double> _livePrices = {};
+  // Stores the price of each stock when the app session started.
   final Map<String, double> _initialSessionPrices = {};
 
   double get cashBalance => _cashBalance;
   List<Holding> get holdings => _holdings;
-  // NEW: Public getter for other widgets to access initial prices.
+  // Public getter for other widgets to access initial prices.
   Map<String, double> get initialSessionPrices => _initialSessionPrices;
   
   // --- DYNAMIC CALCULATIONS ---
 
+  // Calculates the total current market value of all stock holdings.
   double get totalStockMarketValue {
     if (_holdings.isEmpty) return 0.0;
     return _holdings.map((h) {
@@ -43,8 +46,10 @@ class PortfolioProvider with ChangeNotifier {
     }).reduce((a, b) => a + b);
   }
 
+  // The total value of the portfolio (cash + live stock value).
   double get totalPortfolioValue => _cashBalance + totalStockMarketValue;
 
+  // Calculates the total value of holdings at the start of the session.
   double get totalInitialSessionValue {
       if (_holdings.isEmpty) return 0.0;
       return _holdings.map((h) {
@@ -53,8 +58,10 @@ class PortfolioProvider with ChangeNotifier {
       }).reduce((a, b) => a + b);
   }
 
+  // The total dollar gain or loss for the current session (Today's Change).
   double get dailyGainLoss => totalStockMarketValue - totalInitialSessionValue;
   
+  // The total percentage gain or loss for the current session.
   double get dailyGainLossPercent {
       final initialValue = totalInitialSessionValue;
       if (initialValue == 0) return 0.0;
@@ -65,7 +72,9 @@ class PortfolioProvider with ChangeNotifier {
     _loadPortfolio();
   }
   
+  // Called by the UI to provide live price updates.
   void updateLivePrice(String symbol, double price) {
+      // If this is the first price update for this symbol in this session, store it.
       if (!_initialSessionPrices.containsKey(symbol)) {
           _initialSessionPrices[symbol] = price;
       }
