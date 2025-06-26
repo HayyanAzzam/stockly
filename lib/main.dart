@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// UPDATED: Using relative paths for more robust importing.
+// Using a relative path for robustness
 import 'pages/home_page.dart'; 
 import 'providers/portfolio_provider.dart';
 
 void main() {
   runApp(
-    // The ChangeNotiferProvider makes the PortfolioProvider
-    // available to all widgets in the app.
     ChangeNotifierProvider(
       create: (context) => PortfolioProvider(),
       child: const MyApp(),
@@ -26,9 +24,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: Colors.black,
-        scaffoldBackgroundColor: Colors.black, // Ensures a consistent black background
+        scaffoldBackgroundColor: Colors.black,
       ),
-      // This line will now work correctly
       home: const HomePage(), 
       debugShowCheckedModeBanner: false,
     );
