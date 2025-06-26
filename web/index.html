@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+
 
     <style>
         body {
@@ -43,7 +45,7 @@
             z-index: 1000;
             border-top: 1px solid var(--bs-border-color);
         }
-        .bottom-nav-item { color: var(--bs-secondary-color); }
+        .bottom-nav-item { color: var(--bs-secondary-color); cursor: pointer; }
         .bottom-nav-item.active { color: var(--bs-primary-color); }
 
         .card { border-radius: 1rem; }
@@ -54,12 +56,18 @@
             justify-content: center;
             padding: 0.75rem;
             min-height: 80px;
+            background-color: var(--bs-tertiary-bg);
+            border: 1px solid var(--bs-border-color-translucent);
+            transition: background-color 0.2s ease-in-out;
         }
-
+        .stock-logo-card:hover {
+            background-color: var(--bs-secondary-bg);
+        }
         .stock-logo-img {
             width: 100%;
             height: auto;
-            max-width: 60px;
+            max-width: 50px;
+            max-height: 50px;
             object-fit: contain;
         }
 
@@ -73,6 +81,7 @@
             top: 0; left: 0; right: 0; bottom: 0;
             backdrop-filter: blur(5px);
             background-color: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
         }
         .success-icon {
             font-size: 6rem;
@@ -82,6 +91,17 @@
             border: 2px solid var(--bs-primary);
             border-radius: 1.5rem;
             padding: 3rem;
+        }
+        .social-login-img {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+        }
+        .payment-method-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            margin-right: 1rem;
         }
     </style>
 </head>
@@ -96,7 +116,7 @@
             </div>
         </div>
         <div class="welcome-logo-box mb-4">
-            <img src="https://placehold.co/80x80/228B22/FFFFFF?text=S" alt="Stockly Logo">
+            <img src="image/logo%202.png" alt="Stockly Logo" style="width: 80px; height: 80px;">
         </div>
         <h1 class="h2 fw-bold">Welcome to Stockly</h1>
         <p class="text-secondary mb-4">Your personal gateway to smarter investing</p>
@@ -107,7 +127,7 @@
     <div id="loginPage" class="container d-flex justify-content-center align-items-center auth-container d-none">
         <div class="card p-3 bg-body-tertiary auth-card">
             <div class="card-body text-center">
-                <img src="https://placehold.co/40x40/228B22/FFFFFF?text=S" alt="Stockly Logo" class="mb-2">
+                <img src="image/logo%202.png" alt="Stockly Logo" class="mb-2" style="width: 40px; height: 40px;">
                 <h1 class="h4 mb-1 fw-bold">Stockly</h1>
                 <p class="text-secondary mb-4">Your gateway to smart investing</p>
                 
@@ -121,8 +141,8 @@
                 
                 <p class="text-secondary small">or continue with</p>
                 <div class="d-grid gap-2">
-                    <button class="btn btn-secondary"><i class="bi bi-google"></i> Google</button>
-                    <button class="btn btn-secondary"><i class="bi bi-apple"></i> Apple</button>
+                    <button class="btn btn-secondary"><img src="image/google.png" class="social-login-img" alt="Google"> Google</button>
+                    <button class="btn btn-secondary"><img src="image/apfel%201.png" class="social-login-img" alt="Apple"> Apple</button>
                 </div>
                 
                 <p class="mt-4">Don't have an account? <a href="#" id="showRegisterLink">Register Here</a></p>
@@ -134,7 +154,7 @@
     <div id="registrationPage" class="container d-flex justify-content-center align-items-center auth-container d-none">
          <div class="card p-3 bg-body-tertiary auth-card">
             <div class="card-body text-center">
-                <img src="https://placehold.co/40x40/228B22/FFFFFF?text=S" alt="Stockly Logo" class="mb-2">
+                <img src="image/logo%202.png" alt="Stockly Logo" class="mb-2" style="width: 40px; height: 40px;">
                 <h1 class="h4 mb-1 fw-bold">Stockly</h1>
                 <p class="text-secondary mb-4">Registration</p>
                 
@@ -150,8 +170,8 @@
                 
                 <p class="text-secondary small">or register with</p>
                 <div class="d-grid gap-2">
-                    <button class="btn btn-secondary"><i class="bi bi-google"></i> Google</button>
-                    <button class="btn btn-secondary"><i class="bi bi-apple"></i> Apple</button>
+                    <button class="btn btn-secondary"><img src="image/google.png" class="social-login-img" alt="Google"> Google</button>
+                    <button class="btn btn-secondary"><img src="image/apfel%201.png" class="social-login-img" alt="Apple"> Apple</button>
                 </div>
                  <p class="mt-4">Already have an account? <a href="#" id="showLoginLinkFromReg">Sign In</a></p>
             </div>
@@ -161,7 +181,7 @@
     <div id="passwordResetPage" class="container d-flex justify-content-center align-items-center auth-container d-none">
         <div class="card p-3 bg-body-tertiary auth-card">
             <div class="card-body text-center">
-                <img src="https://placehold.co/40x40/228B22/FFFFFF?text=S" alt="Stockly Logo" class="mb-2">
+                <img src="image/logo%202.png" alt="Stockly Logo" class="mb-2" style="width: 40px; height: 40px;">
                 <h1 class="h4 mb-1 fw-bold">Stockly</h1>
                 <p class="text-secondary mb-4">Password reset</p>
                 
@@ -184,7 +204,7 @@
     <div id="newPasswordPage" class="container d-flex justify-content-center align-items-center auth-container d-none">
         <div class="card p-3 bg-body-tertiary auth-card">
             <div class="card-body text-center">
-                <img src="https://placehold.co/40x40/228B22/FFFFFF?text=S" alt="Stockly Logo" class="mb-2">
+                <img src="image/logo%202.png" alt="Stockly Logo" class="mb-2" style="width: 40px; height: 40px;">
                 <h1 class="h4 mb-1 fw-bold">Stockly</h1>
                 <p class="text-secondary mb-4">Password reset</p>
                 
@@ -199,7 +219,7 @@
     <div id="registrationSuccessPage" class="container d-flex justify-content-center align-items-center auth-container d-none">
         <div class="card p-3 bg-body-tertiary auth-card">
             <div class="card-body text-center">
-                <img src="https://placehold.co/40x40/228B22/FFFFFF?text=S" alt="Stockly Logo" class="mb-2">
+                <img src="image/logo%202.png" alt="Stockly Logo" class="mb-2" style="width: 40px; height: 40px;">
                 <h1 class="h4 mb-3 fw-bold">Stockly</h1>
                 
                 <p class="h5 mb-4">Registration successful</p>
@@ -213,7 +233,7 @@
     <div id="resetSuccessPage" class="container d-flex justify-content-center align-items-center auth-container d-none">
         <div class="card p-3 bg-body-tertiary auth-card">
             <div class="card-body text-center">
-                <img src="https://placehold.co/40x40/228B22/FFFFFF?text=S" alt="Stockly Logo" class="mb-2">
+                <img src="image/logo%202.png" alt="Stockly Logo" class="mb-2" style="width: 40px; height: 40px;">
                 <h1 class="h4 mb-3 fw-bold">Stockly</h1>
                 
                 <p class="h5 mb-4">Reset successful</p>
@@ -280,10 +300,10 @@
                     <div class="col-6"><div class="card bg-success-subtle p-4"><i class="bi bi-graph-up-arrow text-success fs-1"></i></div></div>
                     <div class="col-6"><div class="card bg-danger-subtle p-4"><i class="bi bi-graph-down-arrow text-danger fs-1"></i></div></div>
                 </div>
-                <div class="blurry-overlay d-flex flex-column align-items-center justify-content-center text-white">
+                <div id="buyProOverlay" class="blurry-overlay d-flex flex-column align-items-center justify-content-center text-white">
                     <i class="bi bi-lock-fill fs-1"></i>
                     <p class="fw-bold h5">Premium</p>
-                    <a href="#" class="btn btn-light btn-sm">Buy Pro Version</a>
+                    <div class="btn btn-light btn-sm">Buy Pro Version</div>
                 </div>
             </div>
         </section>
@@ -317,27 +337,98 @@
                     <tr><td>Open</td><td id="infoOpen" class="text-end">--</td></tr>
                     <tr><td>High</td><td id="infoHigh" class="text-end">--</td></tr>
                     <tr><td>Low</td><td id="infoLow" class="text-end">--</td></tr>
-                    <tr><td>Volume</td><td id="infoVolume" class="text-end">--</td></tr>
+                    <tr><td>Previous Close</td><td id="infoPrevClose" class="text-end">--</td></tr>
                 </tbody>
             </table>
         </section>
 
         <section class="mb-4">
             <h2 class="h4 fw-bold mb-3">Related News</h2>
-            <div class="list-group">
-                <a href="#" class="list-group-item list-group-item-action">News Story 1 about Company</a>
-                <a href="#" class="list-group-item list-group-item-action">News Story 2 about Company</a>
-            </div>
+            <div class="list-group" id="stockNewsList"></div>
         </section>
+    </div>
+    
+    <div id="newsPage" class="main-container container d-none">
+        <header class="d-flex justify-content-between align-items-center my-4">
+            <h1 class="h3 mb-0 fw-bold">News</h1>
+        </header>
+        <div id="newsList" class="list-group"></div>
+    </div>
+    
+    <div id="notificationsPage" class="main-container container d-none">
+        <header class="d-flex justify-content-between align-items-center my-4">
+            <h1 class="h3 mb-0 fw-bold">Notifications</h1>
+        </header>
+        <div id="notificationsList" class="text-center text-secondary mt-5">
+            <i class="bi bi-bell-slash fs-1"></i>
+            <p class="mt-3">You have no new notifications.</p>
+        </div>
+    </div>
+
+    <div id="proPage" class="main-container container d-none">
+        <header class="my-4">
+            <h1 class="h3 mb-0 fw-bold">Upgrade to Pro</h1>
+        </header>
+        
+        <div class="btn-group w-100 mb-4" role="group">
+            <input type="radio" class="btn-check" name="plan" id="monthlyPlan" autocomplete="off" checked>
+            <label class="btn btn-outline-primary" for="monthlyPlan">Monthly</label>
+        
+            <input type="radio" class="btn-check" name="plan" id="yearlyPlan" autocomplete="off">
+            <label class="btn btn-outline-primary" for="yearlyPlan">Yearly</label>
+        </div>
+
+        <div class="text-center mb-4">
+            <h2 id="planPrice" class="display-4 fw-bold">$12</h2>
+            <p id="planCycle" class="text-secondary">per month</p>
+        </div>
+
+        <ul class="list-group list-group-flush mb-4">
+            <li class="list-group-item bg-transparent border-secondary"><i class="bi bi-check-circle-fill text-success me-2"></i>Ad-free experience</li>
+            <li class="list-group-item bg-transparent border-secondary"><i class="bi bi-check-circle-fill text-success me-2"></i>Priority Support 24/7</li>
+            <li class="list-group-item bg-transparent border-secondary"><i class="bi bi-check-circle-fill text-success me-2"></i>Real-time alerts</li>
+            <li class="list-group-item bg-transparent border-secondary"><i class="bi bi-check-circle-fill text-success me-2"></i>Bitcoin</li>
+            <li class="list-group-item bg-transparent border-secondary"><i class="bi bi-check-circle-fill text-success me-2"></i>API Access</li>
+            <li class="list-group-item bg-transparent border-secondary"><i class="bi bi-check-circle-fill text-success me-2"></i>Team Collaboration</li>
+            <li class="list-group-item bg-transparent border-secondary"><i class="bi bi-check-circle-fill text-success me-2"></i>Advanced Analytics</li>
+            <li class="list-group-item bg-transparent border-secondary"><i class="bi bi-check-circle-fill text-success me-2"></i>Offline Mode</li>
+        </ul>
+        
+        <h4 class="h5 fw-bold mb-3">Payment Method</h4>
+
+        <div class="list-group mb-4">
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                <div><img src="image/atm-card.png" class="payment-method-img" alt="Card">Visa / master card</div>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                <div><img src="image/apple-pay.png" class="payment-method-img" alt="Apple Pay">Apple Pay</div>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                <div><img src="image/google.png" class="payment-method-img" alt="Google Pay">Google pay</div>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                <div><img src="image/bank.png" class="payment-method-img" alt="Bank">Bank Payment</div>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+        
+        <div class="d-grid">
+            <button class="btn btn-primary btn-lg">Upgrade Now</button>
+        </div>
+        <p class="text-secondary text-center small mt-3">30-day money-back guarantee</p>
     </div>
 
     <nav id="bottomNavBar" class="bottom-nav navbar navbar-expand bg-body-tertiary d-none">
         <div class="navbar-nav d-flex justify-content-around w-100">
-            <a href="#" class="nav-link text-center bottom-nav-item"><i class="bi bi-pie-chart fs-4"></i><span class="d-block small">Portfolio</span></a>
-            <a href="#" class="nav-link text-center bottom-nav-item"><i class="bi bi-list-stars fs-4"></i><span class="d-block small">Watchlist</span></a>
-            <a href="#" class="nav-link text-center bottom-nav-item active"><i class="bi bi-bar-chart-fill fs-4"></i><span class="d-block small">Markets</span></a>
-            <a href="#" class="nav-link text-center bottom-nav-item"><i class="bi bi-globe fs-4"></i><span class="d-block small">News</span></a>
-            <a href="#" class="nav-link text-center bottom-nav-item"><i class="bi bi-person-fill fs-4"></i><span class="d-block small">Profile</span></a>
+            <a class="nav-link text-center bottom-nav-item" data-page="portfolio"><i class="bi bi-pie-chart fs-4"></i><span class="d-block small">Portfolio</span></a>
+            <a class="nav-link text-center bottom-nav-item" data-page="watchlist"><i class="bi bi-list-stars fs-4"></i><span class="d-block small">Watchlist</span></a>
+            <a class="nav-link text-center bottom-nav-item active" data-page="home"><i class="bi bi-bar-chart-fill fs-4"></i><span class="d-block small">Markets</span></a>
+            <a class="nav-link text-center bottom-nav-item" data-page="news"><i class="bi bi-globe fs-4"></i><span class="d-block small">News</span></a>
+            <a class="nav-link text-center bottom-nav-item" data-page="pro"><i class="bi bi-gem fs-4"></i><span class="d-block small">Pro</span></a>
+            <a class="nav-link text-center bottom-nav-item" data-page="profile"><i class="bi bi-person-fill fs-4"></i><span class="d-block small">Profile</span></a>
         </div>
     </nav>
 
@@ -359,6 +450,9 @@
         window.togglePassword = togglePassword;
 
         document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURATION ---
+            const FINNHUB_API_KEY = 'YOUR_FINNHUB_API_KEY'; // <-- IMPORTANT: REPLACE WITH YOUR KEY
+            
             // --- THEME MANAGEMENT ---
             const welcomeThemeToggle = document.getElementById('welcomeThemeToggle');
             const appThemeToggleButton = document.getElementById('appThemeToggleButton');
@@ -372,7 +466,9 @@
                 
                 welcomeThemeToggle.checked = !isDark;
                 welcomeThemeLabel.textContent = isDark ? 'Light Mode' : 'Dark Mode';
-                appThemeToggleButton.innerHTML = isDark ? '<i class="bi bi-sun-fill fs-5"></i>' : '<i class="bi bi-moon-stars-fill fs-5"></i>';
+                if (appThemeToggleButton) {
+                    appThemeToggleButton.innerHTML = isDark ? '<i class="bi bi-sun-fill fs-5"></i>' : '<i class="bi bi-moon-stars-fill fs-5"></i>';
+                }
 
                 if (window.stockChartInstance) {
                     renderStockChart(window.stockChartInstance.symbol, window.stockChartInstance.range);
@@ -380,8 +476,10 @@
             }
             
             welcomeThemeToggle.addEventListener('click', () => applyTheme(welcomeThemeToggle.checked ? 'light' : 'dark'));
-            appThemeToggleButton.addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark'));
-            
+            if(appThemeToggleButton) {
+                appThemeToggleButton.addEventListener('click', () => applyTheme(document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark'));
+            }
+
             // --- PAGE NAVIGATION ---
             const pages = {
                 'welcome': document.getElementById('welcomePage'),
@@ -393,19 +491,21 @@
                 'resetSuccess': document.getElementById('resetSuccessPage'),
                 'home': document.getElementById('homePage'),
                 'stockDetail': document.getElementById('stockDetailPage'),
+                'news': document.getElementById('newsPage'),
+                'notifications': document.getElementById('notificationsPage'),
+                'pro': document.getElementById('proPage'),
             };
             const bottomNavBar = document.getElementById('bottomNavBar');
             
             function showPage(pageId) {
-                Object.keys(pages).forEach(id => pages[id].classList.add('d-none'));
+                Object.keys(pages).forEach(id => {
+                    if (pages[id]) pages[id].classList.add('d-none');
+                });
                 if (pages[pageId]) pages[pageId].classList.remove('d-none');
-                bottomNavBar.classList.toggle('d-none', pageId !== 'home');
+                bottomNavBar.classList.toggle('d-none', ['welcome', 'login', 'registration', 'passwordReset', 'newPassword', 'registrationSuccess', 'resetSuccess'].includes(pageId));
 
-                // *** THIS IS THE FIX ***
-                // If the page we are showing is the home page, render its dynamic content.
-                if (pageId === 'home') {
-                    renderHomePage();
-                }
+                if (pageId === 'home') renderHomePage();
+                else if (pageId === 'news') renderNewsPage();
             }
             
             // --- Navigation Event Listeners ---
@@ -419,90 +519,246 @@
             document.getElementById('setNewPasswordButton').addEventListener('click', () => showPage('resetSuccess'));
             document.getElementById('loginFromRegSuccess').addEventListener('click', () => showPage('login'));
             document.getElementById('loginFromResetSuccess').addEventListener('click', () => showPage('login'));
-            document.getElementById('backButton').addEventListener('click', () => showPage('home'));
+            if(document.getElementById('backButton')) {
+                document.getElementById('backButton').addEventListener('click', () => showPage('home'));
+            }
+
             document.addEventListener('showStockDetail', e => {
                 renderStockDetailPage(e.detail.symbol);
                 showPage('stockDetail');
             });
+            
+            document.querySelectorAll('.bottom-nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const currentActive = document.querySelector('.bottom-nav-item.active');
+                    if(currentActive) currentActive.classList.remove('active');
+                    item.classList.add('active');
+                    showPage(item.dataset.page);
+                });
+            });
 
-            // --- MOCK API & APP LOGIC ---
-            const mockApi = {
-                getQuote: async (symbol) => {
-                    await new Promise(r => setTimeout(r, 200));
-                    const data = { 'AAPL': { price: 188.38, change: -7.29, name: 'Apple Inc.' }, 'GOOGL': { price: 175.50, change: 1.50, name: 'Alphabet Inc.' }, 'AMZN': { price: 190.20, change: 0.85, name: 'Amazon.com, Inc.' }, 'NVDA': { price: 980.10, change: -2.10, name: 'NVIDIA Corp.' }, 'MSFT': { price: 450.30, change: 0.65, name: 'Microsoft Corp.' }, 'BTC-USD': { price: 61000.00, change: -350.50, name: 'Bitcoin' }, 'SPY': { price: 507.41, change: 0.25, name: 'S&P 500 ETF' }, 'QQQ': { price: 430.12, change: -0.78, name: 'Nasdaq 100 ETF' }, };
-                    return data[symbol] || { price: 0, change: 0, name: 'Unknown' };
+            document.getElementById('buyProOverlay').addEventListener('click', () => {
+                document.querySelector('.bottom-nav-item[data-page="pro"]').click();
+            });
+
+            const planPrice = document.getElementById('planPrice');
+            const planCycle = document.getElementById('planCycle');
+            document.getElementById('monthlyPlan').addEventListener('change', () => {
+                planPrice.textContent = '$12';
+                planCycle.textContent = 'per month';
+            });
+            document.getElementById('yearlyPlan').addEventListener('change', () => {
+                planPrice.textContent = '$119';
+                planCycle.textContent = 'per year';
+            });
+
+            // --- API & APP LOGIC ---
+            const finnhubApi = {
+                baseUrl: 'https://finnhub.io/api/v1',
+                fetchApi: async function(endpoint, params = {}) {
+                    if (FINNHUB_API_KEY === 'YOUR_FINNHUB_API_KEY') {
+                        console.error("Please replace 'YOUR_FINNHUB_API_KEY' with your actual Finnhub API key.");
+                        alert("API Key not configured. Please see console for details.");
+                        return null;
+                    }
+                    const url = new URL(`${this.baseUrl}${endpoint}`);
+                    url.searchParams.append('token', FINNHUB_API_KEY);
+                    for(const key in params) {
+                        url.searchParams.append(key, params[key]);
+                    }
+                    try {
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const data = await response.json();
+                        if (data.s === 'no_data') {
+                            console.log(`No data for ${endpoint} with params`, params);
+                            return null;
+                        }
+                        return data;
+                    } catch (error) {
+                        console.error("API call failed:", error);
+                        return null;
+                    }
                 },
-                getHistoricalData: async (symbol, range) => {
-                    await new Promise(r => setTimeout(r, 300));
-                    const basePrice = 150 + Math.random() * 50;
-                    let labels = [], dataPoints = [];
-                    let days = range === "1Y" ? 365 : range === "1M" ? 30 : 1;
-                    if (days === 1) { for (let i = 0; i < 9; i++) { labels.push(`Hour ${i + 1}`); dataPoints.push(basePrice + (Math.random() - 0.5) * 10); } } else { for (let i = 0; i < days; i++) { labels.push(`Day ${i + 1}`); dataPoints.push(basePrice + (Math.random() - 0.48) * (i * 0.1)); } }
-                    return { labels, dataPoints };
-                }
+                getQuote: function(symbol) { return this.fetchApi('/quote', { symbol }); },
+                getCompanyProfile: function(symbol) { return this.fetchApi('/stock/profile2', { symbol }); },
+                getMarketNews: function(category = 'general', symbol = null) {
+                    const params = { category };
+                    if (symbol) params.symbol = symbol;
+                    return this.fetchApi('/news', params);
+                },
+                getStockCandles: function(symbol, resolution, from, to) { return this.fetchApi('/stock/candle', { symbol, resolution, from, to }); }
             };
 
             const indices = ['SPY', 'QQQ'];
             const stocks = ['AAPL', 'GOOGL', 'AMZN', 'NVDA', 'MSFT', 'BTC-USD'];
-            let isHomePageRendered = false; // Flag to prevent re-rendering if not needed
-
+            
             async function renderHomePage() {
-                if (isHomePageRendered) return; // Don't re-render if data is already there
-
                 const indicesGrid = document.getElementById('marketIndicesGrid');
                 const stocksGrid = document.getElementById('stocksGrid');
-                indicesGrid.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>';
-                stocksGrid.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>';
+                if (indicesGrid) indicesGrid.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>';
+                if (stocksGrid) stocksGrid.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>';
 
-                // Render Indices
                 let indicesHtml = '';
-                for (const symbol of indices) { const quote = await mockApi.getQuote(symbol); const isUp = quote.change >= 0; indicesHtml += `<div class="col"><div class="card ${isUp ? 'bg-success' : 'bg-danger'} text-white h-100 stock-card" data-symbol="${symbol}"><div class="card-body"><h5 class="card-title fw-bold">${symbol}</h5><p class="card-text">${quote.price.toFixed(2)}</p><p class="card-text small">${isUp ? '+' : ''}${quote.change.toFixed(2)}%</p></div></div></div>`; }
-                indicesGrid.innerHTML = indicesHtml;
-                
-                // Render Stocks
+                for (const symbol of indices) {
+                    const quote = await finnhubApi.getQuote(symbol);
+                    if(quote && typeof quote.c === 'number') {
+                        const isUp = quote.d >= 0;
+                        indicesHtml += `<div class="col"><div class="card ${isUp ? 'bg-success' : 'bg-danger'} text-white h-100 stock-card" data-symbol="${symbol}"><div class="card-body"><h5 class="card-title fw-bold">${symbol}</h5><p class="card-text">${quote.c.toFixed(2)}</p><p class="card-text small">${isUp ? '+' : ''}${quote.dp.toFixed(2)}%</p></div></div></div>`;
+                    }
+                }
+                if (indicesGrid) {
+                    indicesGrid.innerHTML = indicesHtml || '<p class="text-secondary">Could not load market indices.</p>';
+                }
+
                 let stocksHtml = '';
-                for (const symbol of stocks) { stocksHtml += `<div class="col"><a href="#" class="card stock-logo-card stock-card" data-symbol="${symbol}"><img src="https://placehold.co/80x80/FFFFFF/000000?text=${symbol.replace('-USD','').substring(0,4)}" alt="${symbol}" class="stock-logo-img"></a></div>`; }
-                stocksGrid.innerHTML = stocksHtml;
+                for (const symbol of stocks) {
+                    const cleanSymbol = symbol.replace('-USD', '');
+                    stocksHtml += `<div class="col"><a href="#" class="card stock-ticker-card stock-card" data-symbol="${symbol}"><h5 class="mb-0 fw-bold">${cleanSymbol}</h5></a></div>`;
+                }
+                if (stocksGrid) stocksGrid.innerHTML = stocksHtml;
 
                 document.querySelectorAll('.stock-card').forEach(card => {
                     card.addEventListener('click', (e) => {
                         e.preventDefault();
                         const symbol = card.dataset.symbol;
-                        document.dispatchEvent(new CustomEvent('showStockDetail', { detail: { symbol: symbol } }));
+                        document.dispatchEvent(new CustomEvent('showStockDetail', { detail: { symbol } }));
                     });
                 });
-                isHomePageRendered = true; // Set flag
             }
             
+            async function renderNewsPage(symbol = null) {
+                const newsListId = symbol ? 'stockNewsList' : 'newsList';
+                const newsList = document.getElementById(newsListId);
+                if (!newsList) return;
+                newsList.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>';
+                
+                const news = await finnhubApi.getMarketNews(symbol ? 'company' : 'general', symbol);
+                if(news && news.length > 0) {
+                    let newsHtml = '';
+                    news.slice(0, 10).forEach(article => {
+                        newsHtml += `<a href="${article.url}" target="_blank" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">${article.headline}</h5>
+                                <small>${dayjs(article.datetime * 1000).format('YYYY-MM-DD')}</small>
+                            </div>
+                            <p class="mb-1">${article.summary}</p>
+                            <small>${article.source}</small>
+                        </a>`;
+                    });
+                    newsList.innerHTML = newsHtml;
+                } else {
+                    newsList.innerHTML = '<p class="text-secondary">No recent news found.</p>';
+                }
+            }
+
             let stockChartInstance = null;
             
             async function renderStockDetailPage(symbol) {
                 if(!symbol) return;
-                const quote = await mockApi.getQuote(symbol);
-                document.getElementById('stockDetailName').textContent = `${quote.name} (${symbol})`;
+                
+                const stockDetailName = document.getElementById('stockDetailName');
+                if (stockDetailName) stockDetailName.textContent = `Loading ${symbol}...`;
+                
+                const profile = await finnhubApi.getCompanyProfile(symbol);
+                if(profile && stockDetailName) {
+                    stockDetailName.textContent = `${profile.name || symbol} (${symbol})`;
+                }
+                
                 document.querySelector('.time-range-btn.active').classList.remove('active');
-                document.querySelector('.time-range-btn[data-range="1D"]').classList.add('active');
-                renderStockChart(symbol, '1D');
-                document.getElementById('infoOpen').textContent = (quote.price - (Math.random() * 5)).toFixed(2);
-                document.getElementById('infoHigh').textContent = (quote.price + (Math.random() * 3)).toFixed(2);
-                document.getElementById('infoLow').textContent = (quote.price - (Math.random() * 6)).toFixed(2);
-                document.getElementById('infoVolume').textContent = `${(Math.random() * 10).toFixed(2)}M`;
+                document.querySelector('.time-range-btn[data-range="1M"]').click();
+                
+                const quote = await finnhubApi.getQuote(symbol);
+                if (quote) {
+                    document.getElementById('infoOpen').textContent = quote.o.toFixed(2);
+                    document.getElementById('infoHigh').textContent = quote.h.toFixed(2);
+                    document.getElementById('infoLow').textContent = quote.l.toFixed(2);
+                    document.getElementById('infoPrevClose').textContent = quote.pc.toFixed(2);
+                }
+
+                renderNewsPage(symbol);
             }
 
             async function renderStockChart(symbol, range) {
-                const historicalData = await mockApi.getHistoricalData(symbol, range);
+                const to = dayjs().unix();
+                let from, resolution;
+
+                switch(range) {
+                    case '1D':
+                        resolution = '60';
+                        from = dayjs().subtract(1, 'day').unix();
+                        break;
+                    case '1M':
+                        resolution = 'D';
+                        from = dayjs().subtract(1, 'month').unix();
+                        break;
+                    case '1Y':
+                        resolution = 'W';
+                        from = dayjs().subtract(1, 'year').unix();
+                        break;
+                    default:
+                        resolution = 'D';
+                        from = dayjs().subtract(1, 'month').unix();
+                }
+                
+                const candles = await finnhubApi.getStockCandles(symbol, resolution, from, to);
                 const ctx = document.getElementById('stockChart').getContext('2d');
                 const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+
                 if (stockChartInstance) stockChartInstance.destroy();
-                stockChartInstance = new Chart(ctx, { type: 'line', data: { labels: historicalData.labels, datasets: [{ label: `${symbol} Price`, data: historicalData.dataPoints, fill: false, borderColor: '#0d6efd', tension: 0.1, pointRadius: 0 }] }, options: { responsive: true, scales: { y: { ticks: { color: isDarkMode ? 'white' : 'black' } }, x: { ticks: { color: isDarkMode ? 'white' : 'black' } } }, plugins: { legend: { display: false } } } });
-                stockChartInstance.symbol = symbol; stockChartInstance.range = range;
+
+                if (candles && candles.c && candles.c.length > 0) {
+                    stockChartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: candles.t.map(ts => dayjs.unix(ts).format(range === '1D' ? 'HH:mm' : 'MM/DD')),
+                            datasets: [{
+                                label: `${symbol} Price`,
+                                data: candles.c,
+                                fill: false,
+                                borderColor: candles.c[0] <= candles.c[candles.c.length -1] ? '#198754' : '#dc3545',
+                                tension: 0.1,
+                                pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: { ticks: { color: isDarkMode ? 'white' : 'black' } },
+                                x: { ticks: { color: isDarkMode ? 'white' : 'black' } }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                    stockChartInstance.symbol = symbol;
+                    stockChartInstance.range = range;
+                } else {
+                     if (ctx) {
+                        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                        ctx.textAlign = "center";
+                        ctx.fillStyle = isDarkMode ? 'white' : 'black';
+                        ctx.fillText("No chart data available for this range.", ctx.canvas.width/2, ctx.canvas.height/2);
+                    }
+                }
             }
             
             document.querySelectorAll('.time-range-btn').forEach(button => {
                 button.addEventListener('click', () => {
-                    document.querySelector('.time-range-btn.active').classList.remove('active');
+                    const currentActive = document.querySelector('.time-range-btn.active');
+                    if (currentActive) currentActive.classList.remove('active');
                     button.classList.add('active');
-                    renderStockChart(stockChartInstance.symbol, button.dataset.range);
+                    const range = button.dataset.range;
+
+                    let symbol;
+                    if (window.stockChartInstance) {
+                        symbol = window.stockChartInstance.symbol;
+                    } else if (document.getElementById('stockDetailPage').classList.contains('d-none') === false) {
+                        const match = document.getElementById('stockDetailName').textContent.match(/\(([^)]+)\)/);
+                        if(match) symbol = match[1];
+                    }
+
+                    if(symbol) renderStockChart(symbol, range);
                 });
             });
 
@@ -513,3 +769,5 @@
     </script>
 </body>
 </html>
+
+i want to get rid of the background from the stocks card
