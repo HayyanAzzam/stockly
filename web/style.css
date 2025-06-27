@@ -3,7 +3,8 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-family: 'Inter', sans-serif;
-    overflow: hidden; /* Prevent scrolling during transitions */
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    overflow-y: auto;   /* Allow vertical scrolling */
 }
 
 /* --- Reusable Components & Utilities --- */
@@ -19,31 +20,34 @@ body {
 .asset-logo { width: 40px; height: 40px; object-fit: contain; }
 .h-mobile-nav { height: 80px; }
 .small-text { font-size: 0.75rem; }
+.card-link { text-decoration: none; }
 
-/* --- Page Transitions --- */
+/* --- Page Transitions & Layout --- */
 .page {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
-    opacity: 0;
-    transform: scale(0.98);
-    pointer-events: none;
-    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    transition: opacity 0.3s ease-in-out;
+    display: none; /* Hide pages by default */
+    flex-direction: column;
     align-items: center;
     justify-content: center;
 }
 .page.active {
-    opacity: 1;
-    transform: scale(1);
-    pointer-events: auto;
-    position: relative; 
+    display: flex; /* Show the active page */
 }
+
+/* On large screens, home-page has specific alignment */
+#home-page.page.active {
+    align-items: stretch;
+}
+
 .scrollable-content {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
 }
-.scrollable-content::-webkit-scrollbar { display: none; }
+.scrollable-content::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and Opera */
+}
 .main-content-area { display: none; }
 .main-content-area:first-of-type { display: block; }
 
@@ -73,7 +77,6 @@ body {
 [data-bs-theme="dark"] .bg-brand-green-light { background-color: rgba(34, 197, 94, 0.2); }
 [data-bs-theme="dark"] .bg-brand-red-light { background-color: rgba(239, 68, 68, 0.2); }
 
-
 /* --- Form & Nav Overrides --- */
 .form-control:focus, .form-select:focus {
     border-color: #22c55e;
@@ -96,12 +99,56 @@ body {
     height: 256px;
 }
 
-/* --- Pro Page Toggle Switch --- */
-#plan-toggle {
-    width: 3.5em;
-    height: 1.75em;
+/* --- Stock Logo Cards --- */
+.stock-logo-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 80px;
+    padding: 1rem;
+    background-color: var(--bs-tertiary-bg);
+    border-radius: 1rem;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.stock-logo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+}
+.stock-logo-card img {
+    height: 40px;
+    max-width: 100%;
+    object-fit: contain;
+}
+[data-bs-theme="dark"] .stock-logo-card img {
+    filter: invert(0.9) brightness(1.2);
+}
+/* Don't invert logos that already have color */
+[data-bs-theme="dark"] .stock-logo-card img[alt="Google"],
+[data-bs-theme="dark"] .stock-logo-card img[alt="Microsoft"],
+[data-bs-theme="dark"] .stock-logo-card img[alt="Nvidia"] {
+    filter: none; 
+}
+[data-bs-theme="light"] .stock-logo-card img[alt="Amazon"],
+[data-bs-theme="light"] .stock-logo-card img[alt="Apple"]{
+    filter: invert(1);
 }
 
-#upgrade-now-btn {
-    transition: background-color 0.3s ease;
+/* --- Recommended Investment Placeholder Cards --- */
+.recommendation-card {
+    height: 100px;
+    background-color: var(--bs-tertiary-bg);
+    border-radius: 1rem;
+    filter: blur(5px);
+    -webkit-filter: blur(5px);
+    opacity: 0.5;
+    background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.05) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0.05) 75%,
+        transparent 75%,
+        transparent
+    );
 }
