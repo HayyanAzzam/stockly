@@ -209,7 +209,7 @@
                             
                             <div id="portfolio-range-selector" class="btn-group w-100 mb-3" role="group">
                                 <button type="button" class="btn btn-outline-secondary" data-range="Daily">Daily</button>
-                                <button type="button" class="btn btn-outline-secondary" data-range="Weekly">Weekly</button>
+                                <button type="button" class="btn btn-outline-secondary active" data-range="Weekly">Weekly</button>
                                 <button type="button" class="btn btn-outline-secondary" data-range="Monthly">Monthly</button>
                                 <button type="button" class="btn btn-outline-secondary" data-range="Yearly">Yearly</button>
                             </div>
@@ -246,38 +246,9 @@
         
         <!-- Stock Detail Page -->
         <div id="stock-detail-page" class="page flex-column align-items-start justify-content-start bg-body">
+            <!-- Content for this page is generated dynamically by script.js -->
             <div class="container-fluid py-3">
-                <header class="d-flex justify-content-between align-items-center mb-4">
-                    <button id="back-to-dashboard-btn" class="btn btn-link p-2">
-                        <i class="bi bi-arrow-left fs-4"></i>
-                    </button>
-                    <h1 id="detail-stock-ticker-header" class="h5 fw-bold text-body-emphasis mb-0"></h1>
-                    <div style="width: 40px;"></div>
-                </header>
-                <div class="max-w-xl mx-auto w-100">
-                    <div class="mb-4">
-                        <p id="detail-stock-name" class="text-secondary h5"></p>
-                        <div class="d-flex align-items-end gap-3">
-                            <p id="detail-stock-price" class="display-4 fw-bold mb-0"></p>
-                            <p id="detail-stock-change" class="h5 fw-semibold mb-2"></p>
-                        </div>
-                    </div>
-                    <div class="chart-container-large mb-4"><canvas id="mainStockChart"></canvas></div>
-                    <div id="time-range-selector" class="btn-group w-100 mb-4" role="group">
-                        <button type="button" class="btn btn-outline-secondary" data-range="1D">1D</button>
-                        <button type="button" class="btn btn-outline-secondary" data-range="1M">1M</button>
-                        <button type="button" class="btn btn-outline-secondary" data-range="3M">3M</button>
-                        <button type="button" class="btn btn-outline-secondary" data-range="1Y">1Y</button>
-                    </div>
-                    <div class="d-grid gap-3" style="grid-template-columns: 1fr 1fr;">
-                        <button class="btn btn-brand-green btn-lg fw-bold">Buy</button>
-                        <button class="btn btn-brand-red btn-lg fw-bold">Sell</button>
-                    </div>
-                    <div id="stock-news-container" class="mt-5">
-                        <h3 class="h4 fw-bold mb-3">Relevant News</h3>
-                        <div id="stock-news-list"></div>
-                    </div>
-                </div>
+                 <div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>
             </div>
         </div>
 

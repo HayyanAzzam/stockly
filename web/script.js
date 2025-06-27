@@ -6,7 +6,6 @@ let state = {
     user: {
         fullName: 'Fadi Abbara',
         email: 'demo@stockly.com',
-        // UPDATED: Portfolio now holds objects with ticker and shares
         portfolio: [
             { ticker: 'AAPL', shares: 250 },
             { ticker: 'GOOGL', shares: 120 },
@@ -21,7 +20,7 @@ let state = {
     exchangeRates: {},
     chartInstances: {
         main: null,
-        portfolio: null // ADDED: To manage the portfolio chart instance
+        portfolio: null
     },
     searchModal: null,
 };
@@ -117,7 +116,7 @@ function showMainContent(targetId) {
             renderMarketsPage();
             break;
         case 'portfolio-content':
-            renderPortfolioPage(); // UPDATED to call the new function
+            renderPortfolioPage();
             break;
         case 'news-content':
             renderNewsPage();
@@ -139,7 +138,6 @@ async function renderHomePageSummary() {
     let totalValue = 0;
     let openingTotalValue = 0;
 
-    // UPDATED: Use the new portfolio structure with holdings
     const portfolioQuotes = await Promise.all(state.user.portfolio.map(async (holding) => {
         const quote = await getQuote(holding.ticker);
         return { ...quote, shares: holding.shares };
@@ -207,21 +205,18 @@ async function renderMarketsPage() {
     container.innerHTML = content || '<p class="col-12 text-secondary">Could not load market indices.</p>';
 }
 
-// --- NEW PORTFOLIO PAGE FUNCTIONS ---
+// --- UPDATED PORTFOLIO PAGE FUNCTIONS ---
 
 /**
  * Main function to orchestrate the portfolio page rendering.
- * It sets up event listeners and triggers the initial data load.
  */
 async function renderPortfolioPage() {
-    // Clone and replace the button group to remove any old event listeners
     const oldSelector = document.getElementById('portfolio-range-selector');
     if (oldSelector) {
         const newSelector = oldSelector.cloneNode(true);
         oldSelector.parentNode.replaceChild(newSelector, oldSelector);
     }
     
-    // Add fresh event listeners for the time range selector
     document.querySelectorAll('#portfolio-range-selector button').forEach(button => {
         button.addEventListener('click', (e) => {
             const range = e.currentTarget.dataset.range;
@@ -229,13 +224,14 @@ async function renderPortfolioPage() {
         });
     });
 
-    // Initial data load for the page
-    renderPortfolioAssets(); // Renders the bottom list of assets
-    updatePortfolioView('Weekly'); // Renders the chart and top card summary, defaulting to Weekly
+    renderPortfolioAssets(); 
+    // Default to weekly view or whatever the active button is
+    const activeRange = document.querySelector('#portfolio-range-selector button.active')?.dataset.range || 'Weekly';
+    updatePortfolioView(activeRange);
 }
 
 /**
- * Renders the "Your Assets" list and updates the main portfolio value.
+ * Renders the "Your Assets" list.
  */
 async function renderPortfolioAssets() {
     const assetsListContainer = document.getElementById('portfolio-assets-list');
@@ -251,7 +247,6 @@ async function renderPortfolioAssets() {
 
     let totalCurrentValue = 0;
     
-    // Fetch quotes for all holdings to get current prices
     const assetPromises = state.user.portfolio.map(async holding => {
         const [profile, quote] = await Promise.all([getProfile(holding.ticker), getQuote(holding.ticker)]);
         const value = (quote.c || 0) * holding.shares;
@@ -284,11 +279,11 @@ async function renderPortfolioAssets() {
 }
 
 /**
- * Fetches historical data for the selected range and updates the chart and summary card.
+ * [CHART FIX] Fetches historical data and updates the chart and summary.
+ * This function contains the new, more robust data aggregation logic.
  * @param {string} range - The time range ('Daily', 'Weekly', 'Monthly', 'Yearly').
  */
 async function updatePortfolioView(range) {
-    // Set the active button state
     document.querySelectorAll('#portfolio-range-selector button').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.range === range);
     });
@@ -296,10 +291,16 @@ async function updatePortfolioView(range) {
     const chartContainer = document.getElementById('portfolio-chart-container');
     chartContainer.innerHTML = `<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
     
+    if (state.user.portfolio.length === 0) {
+        chartContainer.innerHTML = `<p class="text-secondary text-center h-100 d-flex align-items-center justify-content-center">Add assets to see your portfolio chart.</p>`;
+        document.getElementById('portfolio-change-summary').innerText = "No assets";
+        document.getElementById('portfolio-trend-icon').innerHTML = `<i class="bi bi-pie-chart"></i>`;
+        return;
+    }
+
     const now = Math.floor(Date.now() / 1000);
     let from, resolution, timeLabel;
 
-    // Define API parameters based on the selected range
     switch(range) {
         case 'Daily': from = now - (1 * 24 * 60 * 60); resolution = '15'; timeLabel = 'Today'; break;
         case 'Weekly': from = now - (7 * 24 * 60 * 60); resolution = '60'; timeLabel = 'This Week'; break;
@@ -309,33 +310,50 @@ async function updatePortfolioView(range) {
     }
 
     try {
-        // Fetch candle data for all stocks in the portfolio in parallel
         const candlePromises = state.user.portfolio.map(h => 
-            getCandles(h.ticker, resolution, from, now).then(c => ({...c, shares: h.shares}))
+            getCandles(h.ticker, resolution, from, now).then(c => ({...c, shares: h.shares, ticker: h.ticker}))
         );
-        const allCandles = await Promise.all(candlePromises);
+        const allCandlesData = await Promise.all(candlePromises);
 
-        const validCandles = allCandles.filter(c => c && c.s === 'ok' && c.c);
+        const validCandles = allCandlesData.filter(c => c && c.s === 'ok' && c.c && c.c.length > 0);
+        if (validCandles.length === 0) throw new Error("Could not fetch valid candle data for portfolio.");
 
-        if (validCandles.length === 0) throw new Error("Could not fetch candle data.");
-
-        // Aggregate the value of all stocks at each time point
-        const portfolioHistory = {};
-        const refTimestamps = validCandles[0].t; // Use the first stock's timestamps as reference
-
-        refTimestamps.forEach((ts, index) => {
-            portfolioHistory[ts] = 0;
-            validCandles.forEach(stockData => {
-                // This assumes timestamp arrays are aligned. A more robust solution would search for the closest timestamp.
-                const price = stockData.c[index] || stockData.c[stockData.c.length - 1]; // Fallback to last known price
-                portfolioHistory[ts] += price * stockData.shares;
+        // --- ROBUST AGGREGATION LOGIC ---
+        const stockDataMap = {};
+        const allTimestamps = new Set();
+        validCandles.forEach(stockData => {
+            stockDataMap[stockData.ticker] = {};
+            stockData.t.forEach((ts, i) => {
+                allTimestamps.add(ts);
+                stockDataMap[stockData.ticker][ts] = stockData.c[i];
             });
         });
 
-        const labels = Object.keys(portfolioHistory).map(ts => new Date(ts * 1000));
-        const data = Object.values(portfolioHistory);
+        const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
+        const portfolioHistory = {};
+
+        // Track last known price for each stock to fill gaps
+        const lastKnownPrices = {};
+        state.user.portfolio.forEach(h => lastKnownPrices[h.ticker] = 0);
         
-        // Update the summary card with historical performance
+        sortedTimestamps.forEach(ts => {
+            let totalValueAtTs = 0;
+            state.user.portfolio.forEach(holding => {
+                const stockData = stockDataMap[holding.ticker];
+                let price = lastKnownPrices[holding.ticker]; // Start with the last known price
+                if (stockData && stockData[ts] !== undefined) {
+                    price = stockData[ts]; // Update if there's a price for the current timestamp
+                    lastKnownPrices[holding.ticker] = price; // And save it
+                }
+                totalValueAtTs += price * holding.shares;
+            });
+            portfolioHistory[ts] = totalValueAtTs;
+        });
+
+        const labels = sortedTimestamps.map(ts => new Date(ts * 1000));
+        const data = sortedTimestamps.map(ts => portfolioHistory[ts]).filter(v => v > 0); // Filter out initial zero values
+        if(data.length === 0) throw new Error("Could not compute portfolio history.");
+        
         const startValue = data[0];
         const endValue = data[data.length - 1];
         const changePercentage = startValue ? ((endValue - startValue) / startValue) * 100 : 0;
@@ -349,9 +367,8 @@ async function updatePortfolioView(range) {
         trendIconEl.className = `fs-1 ${getChangeClass(changePercentage)}`;
         trendIconEl.innerHTML = `<i class="bi ${isPositive ? 'bi-graph-up' : 'bi-graph-down'}"></i>`;
 
-        // Re-create canvas element and then render the chart
         chartContainer.innerHTML = `<canvas id="portfolioChart"></canvas>`;
-        createPortfolioChart(labels, data, range);
+        createPortfolioChart(labels.slice(-data.length), data, range);
 
     } catch (error) {
         console.error("Error updating portfolio view:", error);
@@ -362,38 +379,25 @@ async function updatePortfolioView(range) {
 
 /**
  * Creates or updates the portfolio line chart using Chart.js.
- * @param {Date[]} labels - The X-axis labels (dates).
- * @param {number[]} data - The Y-axis data points (portfolio value).
- * @param {string} range - The time range, used for styling the chart color.
  */
 function createPortfolioChart(labels, data, range) {
      const canvasEl = document.getElementById('portfolioChart');
      if (!canvasEl) return;
      if(state.chartInstances.portfolio) state.chartInstances.portfolio.destroy();
 
-     // Define chart colors based on the selected time range to match the design
-     let borderColor = '#22c55e'; // Green for Daily (default)
+     let borderColor = '#22c55e';
      let gradientStartColor = 'rgba(34, 197, 94, 0.4)';
 
-     if (range === 'Weekly') {
-         borderColor = '#ef4444'; // Red
-         gradientStartColor = 'rgba(239, 68, 68, 0.3)';
-     } else if (range === 'Monthly') {
-         borderColor = '#f59e0b'; // Amber/Yellow
-         gradientStartColor = 'rgba(245, 158, 11, 0.3)';
-     } else if (range === 'Yearly') {
-        borderColor = '#3b82f6'; // Blue
-        gradientStartColor = 'rgba(59, 130, 246, 0.3)';
-     }
+     const change = data[data.length - 1] - data[0];
      
      const ctx = canvasEl.getContext('2d');
      const gradient = ctx.createLinearGradient(0, 0, 0, canvasEl.offsetHeight);
-     gradient.addColorStop(0, gradientStartColor);
+     gradient.addColorStop(0, change >= 0 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.3)');
      gradient.addColorStop(1, 'rgba(0,0,0,0)');
      
      state.chartInstances.portfolio = new Chart(ctx, {
         type: 'line', 
-        data: { labels, datasets: [{ data, borderColor, borderWidth: 3, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: gradient }] },
+        data: { labels, datasets: [{ data, borderColor: change >= 0 ? '#22c55e' : '#ef4444', borderWidth: 3, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: gradient }] },
         options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, callbacks: { label: (c) => `Value: ${formatCurrency(c.parsed.y)}` } } }, 
@@ -401,7 +405,7 @@ function createPortfolioChart(labels, data, range) {
         }
     });
 }
-// --- END OF NEW PORTFOLIO FUNCTIONS ---
+// --- END OF PORTFOLIO FUNCTIONS ---
 
 async function renderNewsPage() {
     const container = document.getElementById('news-content');
@@ -570,7 +574,7 @@ function renderProfileEditPage() {
         state.user.fullName = document.getElementById('fullName').value;
         state.user.email = document.getElementById('email').value;
         document.getElementById('dashboard-username').innerText = state.user.fullName;
-        alert('Profile saved successfully!'); // In a real app, use a non-blocking notification
+        // A real app should use a non-blocking notification instead of alert.
         showMainContent('profile-content');
     });
 }
@@ -591,20 +595,21 @@ async function showStockDetail(ticker) {
         return;
     }
 
+    // [WATCHLIST ADDITION] HTML now includes a container for the watchlist button.
     contentArea.innerHTML = `
         <header class="d-flex justify-content-between align-items-center mb-4">
             <button id="back-to-dashboard-btn-detail" class="btn btn-link p-2">
                 <i class="bi bi-arrow-left fs-4"></i>
             </button>
-            <h1 id="detail-stock-ticker-header" class="h5 fw-bold text-body-emphasis mb-0">${profile.ticker || ticker}</h1>
+            <h1 class="h5 fw-bold text-body-emphasis mb-0">${profile.ticker || ticker}</h1>
             <div style="width: 40px;"></div>
         </header>
         <div class="max-w-xl mx-auto w-100">
             <div class="mb-4">
-                <p id="detail-stock-name" class="text-secondary h5">${profile.name}</p>
+                <p class="text-secondary h5">${profile.name}</p>
                 <div class="d-flex align-items-end gap-3">
-                    <p id="detail-stock-price" class="display-4 fw-bold mb-0">${formatCurrency(quote.c)}</p>
-                    <p id="detail-stock-change" class="h5 fw-semibold mb-2 ${getChangeClass(quote.d)}">${quote.d >= 0 ? '+' : ''}${quote.d.toFixed(2)} (${formatPercentage(quote.dp)})</p>
+                    <p class="display-4 fw-bold mb-0">${formatCurrency(quote.c)}</p>
+                    <p class="h5 fw-semibold mb-2 ${getChangeClass(quote.d)}">${quote.d >= 0 ? '+' : ''}${quote.d.toFixed(2)} (${formatPercentage(quote.dp)})</p>
                 </div>
             </div>
             <div class="chart-container-large mb-4"><canvas id="mainStockChart"></canvas></div>
@@ -612,11 +617,14 @@ async function showStockDetail(ticker) {
                 <button type="button" class="btn btn-outline-secondary" data-range="1D">1D</button>
                 <button type="button" class="btn btn-outline-secondary" data-range="1M">1M</button>
                 <button type="button" class="btn btn-outline-secondary" data-range="3M">3M</button>
-                <button type="button" class="btn btn-outline-secondary" data-range="1Y">1Y</button>
+                <button type="button" class="btn btn-outline-secondary active" data-range="1Y">1Y</button>
             </div>
             <div class="d-grid gap-3" style="grid-template-columns: 1fr 1fr;">
                 <button class="btn btn-brand-green btn-lg fw-bold">Buy</button>
                 <button class="btn btn-brand-red btn-lg fw-bold">Sell</button>
+            </div>
+            <div id="watchlist-action-container" class="mt-3 d-grid">
+                <!-- Watchlist button will be rendered here -->
             </div>
             <div id="stock-news-container" class="mt-5">
                 <h3 class="h4 fw-bold mb-3">Relevant News</h3>
@@ -634,11 +642,9 @@ async function showStockDetail(ticker) {
         });
     });
 
-    const activeRangeButton = document.querySelector('#time-range-selector button[data-range="1Y"]');
-    activeRangeButton.classList.add('active');
     updateStockChart('1Y');
-    
     loadStockNews(ticker);
+    renderWatchlistButton(ticker); // [WATCHLIST ADDITION] Render the button
 }
 
 async function loadStockNews(ticker) {
@@ -662,6 +668,51 @@ async function loadStockNews(ticker) {
     container.innerHTML = content + '</div>';
 }
 
+// --- NEW WATCHLIST FUNCTIONS ---
+/**
+ * Toggles a stock's presence in the user's watchlist.
+ * @param {string} ticker The stock ticker to add or remove.
+ */
+function toggleWatchlist(ticker) {
+    const watchlist = state.user.wishlist;
+    const index = watchlist.indexOf(ticker);
+    
+    if (index > -1) {
+        watchlist.splice(index, 1); // Remove from watchlist
+    } else {
+        watchlist.push(ticker); // Add to watchlist
+    }
+    
+    renderWatchlistButton(ticker); // Re-render the button to show the new state
+}
+
+/**
+ * Renders the "Add/Remove from Watchlist" button based on the current state.
+ * @param {string} ticker The stock ticker to check for.
+ */
+function renderWatchlistButton(ticker) {
+    const container = document.getElementById('watchlist-action-container');
+    if (!container) return;
+    
+    const isInWatchlist = state.user.wishlist.includes(ticker);
+    
+    if (isInWatchlist) {
+        container.innerHTML = `
+            <button class="btn btn-secondary btn-lg fw-bold d-flex align-items-center justify-content-center" onclick="toggleWatchlist('${ticker}')">
+                <i class="bi bi-star-fill me-2"></i> Added to Watchlist
+            </button>
+        `;
+    } else {
+        container.innerHTML = `
+            <button class="btn btn-outline-secondary btn-lg fw-bold d-flex align-items-center justify-content-center" onclick="toggleWatchlist('${ticker}')">
+                <i class="bi bi-star me-2"></i> Add to Watchlist
+            </button>
+        `;
+    }
+}
+// --- END OF WATCHLIST FUNCTIONS ---
+
+
 // --- CHARTING ---
 async function updateStockChart(range) {
     if (!state.currentStock) return;
@@ -676,8 +727,10 @@ async function updateStockChart(range) {
     }
 
     const candles = await getCandles(state.currentStock, resolution, from, now);
-    if(!candles || !candles.c) {
+    if(!candles || !candles.c || candles.c.length === 0) {
         console.error("Could not fetch candle data");
+        const chartContainer = document.getElementById('mainStockChart')?.parentElement;
+        if(chartContainer) chartContainer.innerHTML = `<p class="text-secondary text-center h-100 d-flex align-items-center justify-content-center">Could not load chart data.</p>`;
         return;
     }
     
@@ -713,14 +766,17 @@ function toggleTheme() {
     const isDark = document.documentElement.dataset.bsTheme === 'dark';
     document.documentElement.dataset.bsTheme = isDark ? 'light' : 'dark';
     localStorage.setItem('theme', document.documentElement.dataset.bsTheme);
-    // Redraw charts on theme change
+    
+    // Redraw charts on theme change to adapt colors
     if(state.currentStock) {
         const activeRangeButton = document.querySelector('#time-range-selector .active');
         if (activeRangeButton) updateStockChart(activeRangeButton.dataset.range);
     }
-    const activePortfolioRange = document.querySelector('#portfolio-range-selector .active');
-    if (activePortfolioRange) {
-        updatePortfolioView(activePortfolioRange.dataset.range);
+    if (document.getElementById('portfolio-content').style.display === 'block') {
+        const activePortfolioRange = document.querySelector('#portfolio-range-selector .active');
+        if (activePortfolioRange) {
+            updatePortfolioView(activePortfolioRange.dataset.range);
+        }
     }
 }
 
@@ -816,7 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('register-page'); });
     document.getElementById('show-login-from-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('login-page'); });
     
-    document.getElementById('back-to-dashboard-btn').addEventListener('click', () => window.history.back());
+    // The back button on stock detail is created dynamically, so the listener is added there
     document.getElementById('back-to-profile-btn').addEventListener('click', () => window.history.back());
     document.getElementById('back-to-pro-btn').addEventListener('click', () => navigateToPage('pro-page'));
 
