@@ -7,7 +7,8 @@ let state = {
     user: {
         fullName: 'Fadi Abbara',
         email: 'demo@stockly.com',
-        portfolio: ['AAPL', 'MSFT', 'TSLA', 'GOOGL']
+        portfolio: ['AAPL', 'MSFT', 'TSLA', 'GOOGL'],
+        wishlist: ['NVDA', 'AMD'] // Added wishlist to state
     },
     currentStock: null,
     currency: 'USD',
@@ -57,7 +58,7 @@ async function getCityFromCoords(lat, lon) {
 
 // --- UTILITY & FORMATTING FUNCTIONS ---
 function formatCurrency(value) {
-    if (typeof value !== 'number') return '$--. L';
+    if (typeof value !== 'number') return '$--.--';
     const rate = state.exchangeRates[state.currency] || 1;
     const convertedValue = value * rate;
     return new Intl.NumberFormat('en-US', {
@@ -82,7 +83,6 @@ function navigateToPage(pageId) {
     const newPage = document.getElementById(pageId);
     if (newPage) {
         newPage.classList.add('active');
-        // Update hash without causing a page jump if it's the same hash
         if (`#${pageId}` !== window.location.hash) {
             window.location.hash = pageId;
         }
@@ -117,6 +117,12 @@ function showMainContent(targetId) {
             break;
         case 'profile-content':
             renderProfilePage();
+            break;
+        case 'wishlist-content':
+            renderWishlistPage();
+            break;
+        case 'profile-edit-content':
+            renderProfileEditPage();
             break;
     }
 }
@@ -197,12 +203,20 @@ async function renderPortfolioPage() {
     let totalValue = 0;
     let totalChange = 0;
 
+    if (state.user.portfolio.length === 0) {
+        container.innerHTML = `
+            <h2 class="h3 fw-bold mb-4">My Portfolio</h2>
+            <p class="text-secondary">Your portfolio is empty. Add some stocks to get started.</p>
+        `;
+        return;
+    }
+
     const assetPromises = state.user.portfolio.map(async ticker => {
         const quote = await getQuote(ticker);
         const profile = await getProfile(ticker);
-        const value = quote.c * 10; // Assuming 10 shares
+        const value = (quote.c || 0) * 10; // Assuming 10 shares
         totalValue += value;
-        totalChange += quote.d * 10;
+        totalChange += (quote.d || 0) * 10;
         return { ...profile, ...quote, value, symbol: ticker };
     });
 
@@ -226,7 +240,7 @@ async function renderPortfolioPage() {
                     <img src="${asset.logo}" class="asset-logo me-3 rounded-circle" alt="${asset.name}" onerror="this.src='https://placehold.co/40x40?text=${asset.symbol[0]}'">
                     <div>
                         <span class="fw-bold">${asset.symbol}</span>
-                        <small class="d-block text-secondary">${asset.name}</small>
+                        <small class="d-block text-secondary">${asset.name || 'N/A'}</small>
                     </div>
                 </div>
                 <div class="text-end">
@@ -314,33 +328,175 @@ function renderProfilePage() {
     getUserLocation();
 }
 
+async function renderWishlistPage() {
+    const container = document.getElementById('wishlist-content');
+    container.innerHTML = `<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+
+    if (state.user.wishlist.length === 0) {
+        container.innerHTML = `
+            <h2 class="h3 fw-bold mb-4">My Wishlist</h2>
+            <p class="text-secondary">Your wishlist is empty. Search for stocks to add them.</p>
+             <div class="mt-4">
+                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#searchModal">Add Stock to Wishlist</button>
+            </div>
+        `;
+        return;
+    }
+
+    const assetPromises = state.user.wishlist.map(async ticker => {
+        const [profile, quote] = await Promise.all([getProfile(ticker), getQuote(ticker)]);
+        return { ...profile, ...quote, symbol: ticker };
+    });
+
+    const assets = await Promise.all(assetPromises);
+
+    let content = `
+        <h2 class="h3 fw-bold mb-4">My Wishlist</h2>
+        <div class="list-group">`;
+
+    assets.forEach(asset => {
+        content += `
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="event.preventDefault(); showStockDetail('${asset.symbol}')">
+                <div class="d-flex align-items-center">
+                    <img src="${asset.logo}" class="asset-logo me-3 rounded-circle" alt="${asset.name}" onerror="this.src='https://placehold.co/40x40?text=${asset.symbol[0]}'">
+                    <div>
+                        <span class="fw-bold">${asset.symbol}</span>
+                        <small class="d-block text-secondary">${asset.name || 'N/A'}</small>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <p class="fw-bold mb-0">${formatCurrency(asset.c)}</p>
+                    <small class="${getChangeClass(asset.d)}">${formatPercentage(asset.dp)}</small>
+                </div>
+            </a>`;
+    });
+    
+    content += `</div>
+        <div class="mt-4">
+             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#searchModal">Add Stock to Wishlist</button>
+        </div>
+    `;
+    container.innerHTML = content;
+}
+
+function renderProfileEditPage() {
+    const container = document.getElementById('profile-edit-content');
+    container.innerHTML = `
+        <h2 class="h3 fw-bold mb-4">Edit Profile</h2>
+        <div class="card border-0 bg-body-tertiary rounded-4 p-4">
+            <form id="profile-edit-form">
+                <div class="text-center mb-4">
+                    <img class="user-avatar-large rounded-circle mb-2" src="https://placehold.co/100x100/E2E8F0/4A5568?text=FA" alt="User profile picture">
+                    <div><button type="button" class="btn btn-sm btn-link">Change Picture</button></div>
+                </div>
+                <div class="mb-3">
+                    <label for="fullName" class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="fullName" value="${state.user.fullName}">
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email address</label>
+                    <input type="email" class="form-control" id="email" value="${state.user.email}">
+                </div>
+                <hr class="my-4">
+                <h3 class="h5 fw-bold mb-3">Change Password</h3>
+                <div class="mb-3">
+                    <label for="currentPassword" class="form-label">Current Password</label>
+                    <input type="password" class="form-control" id="currentPassword" placeholder="Enter current password">
+                </div>
+                <div class="mb-3">
+                    <label for="newPassword" class="form-label">New Password</label>
+                    <input type="password" class="form-control" id="newPassword" placeholder="Enter new password">
+                </div>
+                <div class="mb-3">
+                    <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                    <input type="password" class="form-control" id="confirmPassword" placeholder="Confirm new password">
+                </div>
+                <button type="submit" class="btn btn-brand-green w-100 fw-semibold py-2 mt-3">Save Changes</button>
+            </form>
+        </div>
+    `;
+
+    document.getElementById('profile-edit-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        // Here you would typically handle form submission, e.g., send to a server.
+        // For this demo, we'll just update the state.
+        state.user.fullName = document.getElementById('fullName').value;
+        state.user.email = document.getElementById('email').value;
+        document.getElementById('dashboard-username').innerText = state.user.fullName;
+        alert('Profile saved successfully!'); // Replace with a more user-friendly notification
+        showMainContent('profile-content'); // Go back to settings page
+    });
+}
+
+
 // --- STOCK DETAIL PAGE ---
 async function showStockDetail(ticker) {
     state.currentStock = ticker;
     navigateToPage('stock-detail-page');
     
-    document.getElementById('detail-stock-name').innerText = 'Loading...';
-    document.getElementById('detail-stock-price').innerText = '';
-    document.getElementById('detail-stock-change').innerText = '';
+    const contentArea = document.querySelector('#stock-detail-page .container-fluid');
+    contentArea.innerHTML = `<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
 
     const [quote, profile] = await Promise.all([getQuote(ticker), getProfile(ticker)]);
     
-    document.getElementById('detail-stock-ticker-header').innerText = profile.ticker || ticker;
-    document.getElementById('detail-stock-name').innerText = profile.name;
-    document.getElementById('detail-stock-price').innerText = formatCurrency(quote.c);
-    
-    const changeEl = document.getElementById('detail-stock-change');
-    changeEl.innerText = `${quote.d >= 0 ? '+' : ''}${quote.d.toFixed(2)} (${formatPercentage(quote.dp)})`;
-    changeEl.className = `h5 fw-semibold mb-2 ${getChangeClass(quote.d)}`;
+    if (!profile) {
+        contentArea.innerHTML = `<p class="text-secondary text-center">Could not load stock details.</p>`;
+        return;
+    }
 
-    const activeRangeButton = document.querySelector('#time-range-selector button.active') || document.querySelector('#time-range-selector button[data-range="1Y"]');
-    activeRangeButton.click();
+    contentArea.innerHTML = `
+        <header class="d-flex justify-content-between align-items-center mb-4">
+            <button id="back-to-dashboard-btn" class="btn btn-link p-2">
+                <i class="bi bi-arrow-left fs-4"></i>
+            </button>
+            <h1 id="detail-stock-ticker-header" class="h5 fw-bold text-body-emphasis mb-0">${profile.ticker || ticker}</h1>
+            <div style="width: 40px;"></div>
+        </header>
+        <div class="max-w-xl mx-auto w-100">
+            <div class="mb-4">
+                <p id="detail-stock-name" class="text-secondary h5">${profile.name}</p>
+                <div class="d-flex align-items-end gap-3">
+                    <p id="detail-stock-price" class="display-4 fw-bold mb-0">${formatCurrency(quote.c)}</p>
+                    <p id="detail-stock-change" class="h5 fw-semibold mb-2 ${getChangeClass(quote.d)}">${quote.d >= 0 ? '+' : ''}${quote.d.toFixed(2)} (${formatPercentage(quote.dp)})</p>
+                </div>
+            </div>
+            <div class="chart-container-large mb-4"><canvas id="mainStockChart"></canvas></div>
+            <div id="time-range-selector" class="btn-group w-100 mb-4" role="group">
+                <button type="button" class="btn btn-outline-secondary" data-range="1D">1D</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="1M">1M</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="3M">3M</button>
+                <button type="button" class="btn btn-outline-secondary" data-range="1Y">1Y</button>
+            </div>
+            <div class="d-grid gap-3" style="grid-template-columns: 1fr 1fr;">
+                <button class="btn btn-brand-green btn-lg fw-bold">Buy</button>
+                <button class="btn btn-brand-red btn-lg fw-bold">Sell</button>
+            </div>
+            <div id="stock-news-container" class="mt-5">
+                <h3 class="h4 fw-bold mb-3">Relevant News</h3>
+                <div id="stock-news-list"></div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('back-to-dashboard-btn').addEventListener('click', () => window.history.back());
+    document.querySelectorAll('#time-range-selector button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            document.querySelectorAll('#time-range-selector button').forEach(btn => btn.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            updateStockChart(e.currentTarget.dataset.range);
+        });
+    });
+
+    const activeRangeButton = document.querySelector('#time-range-selector button[data-range="1Y"]');
+    activeRangeButton.classList.add('active');
+    updateStockChart('1Y');
     
     loadStockNews(ticker);
 }
 
 async function loadStockNews(ticker) {
     const container = document.getElementById('stock-news-list');
+    if (!container) return;
     container.innerHTML = `<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>`;
     const news = await getCompanyNews(ticker);
     if (!news || news.length === 0) {
@@ -375,6 +531,7 @@ async function updateStockChart(range) {
     const candles = await getCandles(state.currentStock, resolution, from, now);
     if(!candles || !candles.c) {
         console.error("Could not fetch candle data");
+        // Optionally render a message on the chart canvas
         return;
     }
     
@@ -476,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     document.getElementById('lets-go-btn').addEventListener('click', () => navigateToPage('auth-container'));
     document.getElementById('login-form').addEventListener('submit', (e) => { e.preventDefault(); navigateToPage('home-page'); });
-    document.getElementById('register-form').addEventListener('submit', (e) => { e.preventDefault(); navigateToPage('login-page'); });
+    document.getElementById('register-form').addEventListener('submit', (e) => { e.preventDefault(); navigateToPage('home-page'); }); // Should probably go to login or home
     
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', (e) => { e.preventDefault(); showMainContent(link.dataset.target); });
@@ -485,16 +642,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('register-page'); });
     document.getElementById('show-login-from-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('login-page'); });
     
+    // Note: back buttons inside dynamic content are added when content is rendered
     document.getElementById('back-to-dashboard-btn').addEventListener('click', () => window.history.back());
     document.getElementById('back-to-profile-btn').addEventListener('click', () => window.history.back());
 
-    document.querySelectorAll('#time-range-selector button').forEach(button => {
-        button.addEventListener('click', (e) => {
-            document.querySelectorAll('#time-range-selector button').forEach(btn => btn.classList.remove('active'));
-            e.currentTarget.classList.add('active');
-            updateStockChart(e.currentTarget.dataset.range);
-        });
-    });
 
     document.getElementById('plan-toggle').addEventListener('change', (e) => {
         const isYearly = e.currentTarget.checked;
@@ -517,15 +668,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dashboard-username').innerText = state.user.fullName;
 
     // Handle history and initial page load
-    window.addEventListener('popstate', () => {
-        const pageId = window.location.hash.substring(1) || 'welcome-page';
-        navigateToPage(pageId);
+    window.addEventListener('popstate', (event) => {
+        const pageId = window.location.hash.substring(1);
+        if (pageId) {
+           navigateToPage(pageId);
+        } else {
+           navigateToPage('welcome-page');
+        }
     });
 
     const initialPage = window.location.hash.substring(1) || 'welcome-page';
     navigateToPage(initialPage);
+    
     // If loading into the main app, show default content
     if (initialPage === 'home-page') {
-        showMainContent('markets-content');
+        const activeLink = document.querySelector('.nav-link.active');
+        if (activeLink) {
+             showMainContent(activeLink.dataset.target);
+        } else {
+             showMainContent('markets-content');
+        }
     }
 });
