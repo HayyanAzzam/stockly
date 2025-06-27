@@ -1,0 +1,122 @@
+:root {
+    --color-bg: #131722;
+    --color-surface: #1e222d;
+    --color-text-primary: #D1D4DC;
+    --color-text-secondary: #a0aec0;
+    --color-border: #4a5568;
+    --color-green: #26A69A;
+    --color-red: #EF5350;
+}
+
+.light-mode {
+    --color-bg: #f8f9fa;
+    --color-surface: #ffffff;
+    --color-text-primary: #212529;
+    --color-text-secondary: #6c757d;
+    --color-border: #dee2e6;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text-secondary);
+}
+
+.text-theme-primary { color: var(--color-text-primary); }
+.text-theme-secondary { color: var(--color-text-secondary); }
+.bg-theme-bg { background-color: var(--color-bg); }
+.bg-theme-surface { background-color: var(--color-surface); }
+.border-theme-border { border-color: var(--color-border); }
+
+.text-green-custom { color: var(--color-green); }
+.text-red-custom { color: var(--color-red); }
+.bg-green-custom { background-color: var(--color-green); }
+.bg-red-custom { background-color: var(--color-red); }
+.border-green-custom { border-color: var(--color-green); }
+.border-red-custom { border-color: var(--color-red); }
+
+.page-container { 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center; 
+    min-height: 100vh; 
+    padding: 1.5rem; 
+}
+
+.page-with-nav { 
+    padding-bottom: 80px; /* Add padding for the fixed bottom nav */
+}
+
+.form-input { 
+    background-color: var(--color-surface); 
+    border: 1px solid var(--color-border); 
+    border-radius: 0.5rem; 
+    padding: 0.75rem 1rem; 
+    width: 100%; 
+    color: var(--color-text-primary); 
+}
+.form-input::placeholder { 
+    color: var(--color-text-secondary); 
+}
+.form-input:focus { 
+    outline: none; 
+    border-color: #4299e1; 
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5); 
+}
+
+.nav-item {
+    color: var(--color-text-secondary);
+}
+.nav-item-active {
+    color: var(--color-green);
+}
+.nav-item-active svg, .nav-item-active span { 
+    color: var(--color-green);
+}
+
+.time-button-active {
+    background-color: var(--color-green);
+    color: white;
+}
+.time-button-inactive {
+    background-color: transparent;
+    color: var(--color-text-secondary);
+}
+.time-button:hover {
+    background-color: var(--color-border);
+}
+
+
+/* Toggle Switch */
+.toggle-label {
+    transition: background-color .2s ease-in-out;
+}
+.toggle-label::after { 
+    content: ''; 
+    position: absolute; 
+    top: 2px; 
+    left: 2px; 
+    background: white; 
+    border-radius: 50%; 
+    width: 1.25rem; 
+    height: 1.25rem; 
+    transition: .2s; 
+}
+.toggle-checkbox:checked + .toggle-label { 
+    background-color: var(--color-green); 
+}
+.toggle-checkbox:checked + .toggle-label::after { 
+    transform: translateX(80%); 
+    border-color: white; 
+}
+.dark-mode .toggle-checkbox:checked + .toggle-label::after {
+    transform: translateX(80%);
+}
+.light-mode .toggle-label::after {
+    transform: translateX(0);
+}
