@@ -1,15 +1,30 @@
-/* Custom styles from reference for page transitions and layout */
+/* --- Global & Fonts --- */
 body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-family: 'Inter', sans-serif;
     overflow: hidden; /* Prevent scrolling during transitions */
 }
+
+/* --- Reusable Components & Utilities --- */
+.max-w-md { max-width: 448px; }
+.max-w-sm { max-width: 384px; }
+.max-w-xl { max-width: 672px; }
+.w-lg-250px { width: 250px; }
+.w-10 { width: 2.5rem; height: 2.5rem; }
+.w-16 { width: 4rem; height: 4rem; }
+.w-20 { width: 5rem; height: 5rem; }
+.user-avatar { width: 48px; height: 48px; }
+.user-avatar-large { width: 80px; height: 80px; }
+.asset-logo { width: 40px; height: 40px; object-fit: contain; }
+.h-mobile-nav { height: 80px; }
+.small-text { font-size: 0.75rem; }
+
+/* --- Page Transitions --- */
 .page {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
     opacity: 0;
     transform: scale(0.98);
@@ -24,77 +39,69 @@ body {
     pointer-events: auto;
     position: relative; 
 }
-/* Hide scrollbar for main content but allow scrolling */
-.scrollable-content::-webkit-scrollbar {
-    display: none;
-}
 .scrollable-content {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
-.main-content-area {
-    display: none;
+.scrollable-content::-webkit-scrollbar { display: none; }
+.main-content-area { display: none; }
+.main-content-area:first-of-type { display: block; }
+
+/* --- Custom Bootstrap Colors --- */
+.btn-brand-green {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #22c55e;
+    --bs-btn-border-color: #22c55e;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #16a34a;
+    --bs-btn-hover-border-color: #159544;
 }
-.main-content-area.active {
-    display: block;
+.btn-brand-red {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #ef4444;
+    --bs-btn-border-color: #ef4444;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #dc2626;
+    --bs-btn-hover-border-color: #ca2424;
+}
+.text-brand-green { color: #22c55e !important; }
+.text-brand-red { color: #ef4444 !important; }
+
+.bg-brand-green-light { background-color: rgba(34, 197, 94, 0.1); }
+.bg-brand-red-light { background-color: rgba(239, 68, 68, 0.1); }
+
+[data-bs-theme="dark"] .bg-brand-green-light { background-color: rgba(34, 197, 94, 0.2); }
+[data-bs-theme="dark"] .bg-brand-red-light { background-color: rgba(239, 68, 68, 0.2); }
+
+
+/* --- Form & Nav Overrides --- */
+.form-control:focus, .form-select:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 0.25rem rgba(34, 197, 94, 0.25);
 }
 
-/* --- Nav Link Styling --- */
-.nav-link {
-    color: #6B7280; /* light-text-secondary */
+.nav-pills .nav-link, .nav-link {
+    color: var(--bs-secondary-color);
 }
-html.dark .nav-link {
-    color: #A0A0A0; /* dark-text-secondary */
-}
-.nav-link.active {
-    color: #22c55e; /* brand-green */
+.nav-pills .nav-link.active, .nav-link.active {
+    color: #22c55e;
     background-color: rgba(34, 197, 94, 0.1);
 }
-html.dark .nav-link.active {
+[data-bs-theme="dark"] .nav-pills .nav-link.active, [data-bs-theme="dark"] .nav-link.active {
     background-color: rgba(34, 197, 94, 0.2);
 }
-.nav-link.active svg {
-    color: #22c55e;
-}
-.nav-link svg path[d*="M16 6l"] { /* Special case for filled Markets icon */
-    stroke-width: 0;
-}
-.nav-link.active svg path[d*="M16 6l"] {
-    fill: #22c55e;
+
+/* --- Charting --- */
+.chart-container-large {
+    height: 256px;
 }
 
-
-/* --- Stock Detail Time Range Buttons --- */
-.time-button.active {
-    background-color: #22c55e; /* brand-green */
-    color: white;
-}
-.time-button {
-    color: #6B7280; /* light-text-secondary */
-}
-html.dark .time-button {
-    color: #A0A0A0; /* dark-text-secondary */
-}
-.time-button:hover {
-    background-color: #E5E7EB; /* light-input */
-}
-html.dark .time-button:hover {
-    background-color: #2D2D2D; /* dark-input */
+/* --- Pro Page Toggle Switch --- */
+#plan-toggle {
+    width: 3.5em;
+    height: 1.75em;
 }
 
-/* --- Portfolio Timespan Buttons --- */
-.portfolio-timespan-btn.active {
-    background-color: #FFFFFF; /* light-card */
-    color: #111827; /* light-text */
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-}
-html.dark .portfolio-timespan-btn.active {
-    background-color: #1E1E1E; /* dark-card */
-    color: #E0E0E0; /* dark-text */
-}
-.portfolio-timespan-btn {
-    color: #6B7280; /* light-text-secondary */
-}
-html.dark .portfolio-timespan-btn {
-    color: #A0A0A0; /* dark-text-secondary */
+#upgrade-now-btn {
+    transition: background-color 0.3s ease;
 }

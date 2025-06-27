@@ -1,276 +1,463 @@
-// --- STATE & MOCK DATA ---
-let currentStockTicker = null;
-let mainChartInstance = null;
-let portfolioChartInstance = null;
+// --- CONFIG & STATE ---
+// !!! IMPORTANT: REPLACE WITH YOUR FINNHUB API KEY
+const FINNHUB_API_KEY = 'd1f7lvhr01qsg7davdsgd1f7lvhr01qsg7davdt0';
+const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 
-const mockUser = { fullName: 'Fadi Abbara', email: 'fadi@stockly.com' };
-
-const mockStockData = {
-    'AAPL': { name: 'Apple Inc.', price: 238.45, change: 3.2, changePercent: 1.36, positive: true, logo: 'https://i.ibb.co/bM8LHkTz/8.jpg'},
-    'GOOGL': { name: 'Alphabet Inc.', price: 179.45, change: -1.80, changePercent: -1.0, positive: false, logo: 'https://i.ibb.co/cKp0HYBp/7.jpg'},
-    'TSLA': { name: 'Tesla Inc.', price: 183.01, change: 5.01, changePercent: 2.8, positive: true, logo: 'https://i.ibb.co/k3CBgB9/stockly-logo.png' },
-    'MSFT': { name: 'Microsoft Corp.', price: 449.78, change: 2.10, changePercent: 0.47, positive: true, logo: 'https://i.ibb.co/s9DtwFG6/3.jpg'},
-    'AMZN': { name: 'Amazon.com, Inc.', price: 183.66, change: -2.01, changePercent: -1.08, positive: false, logo: 'https://i.ibb.co/nNGXMBTp/5.jpg'},
-    'NVDA': { name: 'NVIDIA Corp.', price: 121.87, change: 1.12, changePercent: 0.93, positive: true, logo: 'https://i.ibb.co/fzwV969j/4.jpg'},
+let state = {
+    user: {
+        fullName: 'Demo User',
+        email: 'demo@stockly.com',
+        portfolio: ['AAPL', 'MSFT', 'TSLA', 'GOOGL']
+    },
+    currentStock: null,
+    currency: 'USD',
+    exchangeRates: {},
+    chartInstances: {
+        main: null,
+        portfolio: null
+    },
+    searchModal: null,
 };
 
-const mockChartData = {
-    '1D': { labels: ['-6h', '-5h', '-4h', '-3h', '-2h', '-1h', 'now'], data: [220, 225, 223, 230, 228, 235, 238.45] },
-    '1W': { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], data: [210, 215, 220, 228, 238.45] },
-    '1M': { labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'], data: [200, 220, 215, 238.45] },
-    '1Y': { labels: ['Q1', 'Q2', 'Q3', 'Q4'], data: [150, 170, 190, 238.45] },
-};
+// --- API FUNCTIONS ---
+async function apiRequest(endpoint) {
+    try {
+        const response = await fetch(`${FINNHUB_BASE_URL}${endpoint}&token=${FINNHUB_API_KEY}`);
+        if (!response.ok) {
+            throw new Error(`API request failed: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("API Error:", error);
+        return null;
+    }
+}
 
-const mockUserPortfolio = {
-    daily: { value: 156842.50, change: 3764.22, changePercent: 2.4, positive: true, chartData: [152000, 153000, 152500, 154000, 155500, 156842.50] },
-    weekly: { value: 156842.50, change: 9724.25, changePercent: 6.2, positive: true, chartData: [147000, 149000, 152500, 151000, 154000, 156842.50] },
-    monthly: { value: 156842.50, change: -22758.16, changePercent: -14.5, positive: false, chartData: [179000, 172000, 162500, 168000, 154000, 156842.50] },
-    assets: [
-        { ticker: 'AAPL', shares: 100, value: 23845.00, changePercent: 1.36 },
-        { ticker: 'MSFT', shares: 150, value: 67467.00, changePercent: 0.47 },
-        { ticker: 'TSLA', shares: 350, value: 64053.50, changePercent: 2.8 },
-    ]
-};
+async function getQuote(ticker) { return apiRequest(`/quote?symbol=${ticker}`); }
+async function getProfile(ticker) { return apiRequest(`/stock/profile2?symbol=${ticker}`); }
+async function getGeneralNews() { return apiRequest(`/news?category=general`); }
+async function getCompanyNews(ticker) {
+    const to = new Date().toISOString().split('T')[0];
+    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 30 days ago
+    return apiRequest(`/company-news?symbol=${ticker}&from=${from}&to=${to}`);
+}
+async function searchSymbols(query) { return apiRequest(`/search?q=${query}`); }
+async function getCandles(ticker, resolution, from, to) {
+    return apiRequest(`/stock/candle?symbol=${ticker}&resolution=${resolution}&from=${from}&to=${to}`);
+}
+async function getExchangeRates() {
+    const data = await apiRequest('/forex/rates?base=USD');
+    if (data && data.quote) {
+        state.exchangeRates = data.quote;
+    }
+}
 
-const mockNewsData = [
-    { id: 1, ticker: 'AAPL', timestamp: '3 hours ago', headline: 'Apple Reports Record Q4 Earnings', imageUrl: 'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?auto=format&fit=crop&w=400&q=60' },
-    { id: 2, ticker: 'TSLA', timestamp: '8 hours ago', headline: 'Tesla Stock Surges on Autonomous Vehicle Breakthrough', imageUrl: 'https://images.unsplash.com/photo-1617704548623-34047b423862?auto=format&fit=crop&w=400&q=60' }
-];
+// --- UTILITY & FORMATTING FUNCTIONS ---
+function formatCurrency(value) {
+    const rate = state.exchangeRates[state.currency] || 1;
+    const convertedValue = value * rate;
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: state.currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(convertedValue);
+}
 
-// --- PAGE ROUTING & NAVIGATION ---
+function formatPercentage(value) { return `${value.toFixed(2)}%`; }
+
+function getChangeClass(value) { return value >= 0 ? 'text-brand-green' : 'text-brand-red'; }
+
+function getBGClass(value) { return value >= 0 ? 'bg-brand-green-light' : 'bg-brand-red-light'; }
+
+
+// --- PAGE & CONTENT NAVIGATION ---
 function navigateToPage(pageId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(pageId)?.classList.add('active');
-    document.body.style.overflow = pageId === 'home-page' ? 'auto' : 'hidden';
 }
 
 function showAuthSubPage(subPageId) {
     navigateToPage('auth-container');
-    document.querySelectorAll('.auth-sub-page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(subPageId)?.classList.remove('hidden');
+    document.querySelectorAll('.auth-sub-page').forEach(p => p.classList.add('d-none'));
+    document.getElementById(subPageId)?.classList.remove('d-none');
 }
 
 function showMainContent(targetId) {
-    document.querySelectorAll('.main-content-area').forEach(area => {
-        area.classList.toggle('active', area.id === targetId);
-    });
+    document.querySelectorAll('.main-content-area').forEach(area => area.style.display = 'none');
+    document.getElementById(targetId).style.display = 'block';
+
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.toggle('active', link.dataset.target === targetId);
     });
-    
-    switch(targetId) {
-        case 'markets-content': initializeDashboard(); break;
-        case 'portfolio-content': showPortfolioPage(); break;
-        case 'news-content': showNewsPage(); break;
-        case 'profile-content': showProfileSettingsPage(); break;
+
+    // Load content for the visible page
+    switch (targetId) {
+        case 'markets-content': renderMarketsPage(); break;
+        case 'portfolio-content': renderPortfolioPage(); break;
+        case 'news-content': renderNewsPage(); break;
+        case 'profile-content': renderProfilePage(); break;
     }
 }
 
-// --- INITIALIZATION & PAGE RENDERING ---
-function initializeDashboard() {
-    document.getElementById('dashboard-username').innerText = mockUser.fullName;
+// --- RENDER FUNCTIONS ---
+async function renderMarketsPage() {
+    const container = document.getElementById('markets-content');
+    container.innerHTML = `<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
     
-    // Portfolio Value Card
-    const portfolio = mockUserPortfolio.daily;
-    document.getElementById('dashboard-portfolio-value').innerText = `$${portfolio.value.toLocaleString('en-US')}`;
-    const portfolioChangeEl = document.getElementById('dashboard-portfolio-change');
-    portfolioChangeEl.innerText = `${portfolio.positive ? '+' : ''}${portfolio.changePercent}% Today`;
-    portfolioChangeEl.className = `text-sm font-semibold mt-1 ${portfolio.positive ? 'text-brand-green' : 'text-brand-red'}`;
+    const tickers = ['^GSPC', '^IXIC', '^DJI', 'TSLA'];
+    const promises = tickers.map(async ticker => {
+        const quote = await getQuote(ticker);
+        const profile = await getProfile(ticker.replace('^', ''));
+        return { ...quote, ...profile, symbol: ticker };
+    });
 
-    // Trending Card (using Tesla as an example)
-    const trending = mockStockData['TSLA'];
-    document.getElementById('dashboard-trending-name').innerText = trending.name;
-    document.getElementById('dashboard-trending-price').innerText = `$${trending.price}`;
-    const trendingChangeEl = document.getElementById('dashboard-trending-change');
-    trendingChangeEl.innerText = `${trending.changePercent}%`;
-    trendingChangeEl.className = `text-sm font-semibold mt-1 ${trending.positive ? 'text-brand-green' : 'text-brand-red'}`;
-    document.getElementById('dashboard-trending-chart').innerHTML = `<svg class="w-12 h-8 ${trending.positive ? 'text-brand-green' : 'text-brand-red'}" viewBox="0 0 100 40"><path d="M0 25 L15 15 L30 20 L45 5 L60 15 L75 10 L90 25 L100 20" fill="none" stroke="currentColor" stroke-width="3"/></svg>`;
+    const stocks = await Promise.all(promises);
 
-    // Total Gain/Loss Card
-    const gainLossEl = document.getElementById('dashboard-gain-loss');
-    gainLossEl.innerText = `${portfolio.positive ? '+' : ''}$${portfolio.change.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-    gainLossEl.className = `text-3xl font-bold mt-1 ${portfolio.positive ? 'text-brand-green' : 'text-brand-red'}`;
-    
-    // Market Indices
-    const indicesContainer = document.getElementById('market-indices-container');
-    indicesContainer.innerHTML = '';
-    ['AAPL', 'MSFT', 'NVDA', 'TSLA'].forEach(ticker => {
-        const stock = mockStockData[ticker];
-        const cardColor = stock.positive ? 'bg-green-100 dark:bg-green-900/40' : 'bg-red-100 dark:bg-red-900/40';
-        const textColor = stock.positive ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300';
-        const chartColor = stock.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-        indicesContainer.innerHTML += `
-            <div class="${cardColor} p-3 rounded-xl cursor-pointer" onclick="showStockDetail('${ticker}')">
-                <p class="font-bold ${textColor}">${ticker}</p>
-                <div class="flex justify-between items-end mt-2">
-                    <p class="text-lg font-bold ${textColor}">$${stock.price}</p>
-                    <svg class="w-10 h-6 ${chartColor}" viewBox="0 0 100 40"><path d="${stock.positive ? 'M0 30 L20 20 L40 25 L60 10 L80 15 L100 5' : 'M0 10 L20 20 L40 15 L60 30 L80 25 L100 35'}" fill="none" stroke="currentColor" stroke-width="4"/></svg>
+    let content = `<h3 class="h4 fw-bold mb-3">Market Indices</h3>
+                   <div class="row g-3 mb-5">`;
+
+    stocks.forEach(stock => {
+        const change = stock.d;
+        const isPositive = change >= 0;
+        content += `
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 p-3 rounded-4 border-0 shadow-sm ${getBGClass(change)}">
+                    <h4 class="h6 fw-bold">${stock.name || stock.symbol.replace('^', '')}</h4>
+                    <p class="h4 fw-bold mb-0">${formatCurrency(stock.c)}</p>
+                    <p class="fw-semibold mb-0 ${getChangeClass(change)}">${isPositive ? '+' : ''}${change.toFixed(2)} (${formatPercentage(stock.dp)})</p>
                 </div>
             </div>`;
     });
+    
+    content += `</div>`;
+    container.innerHTML = content;
+}
 
-    // Stocks Container
-    const stocksContainer = document.getElementById('stocks-container');
-    stocksContainer.innerHTML = '';
-    Object.values(mockStockData).forEach(stock => {
-        stocksContainer.innerHTML += `
-            <div class="bg-light-card dark:bg-dark-card p-4 rounded-xl shadow flex justify-center items-center h-24 lg:h-28 cursor-pointer" onclick="showStockDetail('${Object.keys(mockStockData).find(key => mockStockData[key] === stock)}')">
-                <img src="${stock.logo}" alt="${stock.name} Logo" class="w-12 h-12 object-contain">
+async function renderPortfolioPage() {
+    const container = document.getElementById('portfolio-content');
+    container.innerHTML = `<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+    
+    let totalValue = 0;
+    let totalChange = 0;
+
+    const assetPromises = state.user.portfolio.map(async ticker => {
+        const quote = await getQuote(ticker);
+        const profile = await getProfile(ticker);
+        const value = quote.c * 10; // Assuming 10 shares of each
+        totalValue += value;
+        totalChange += quote.d * 10;
+        return { ...profile, ...quote, value, symbol: ticker };
+    });
+
+    const assets = await Promise.all(assetPromises);
+    
+    const isPositive = totalChange >= 0;
+
+    let content = `
+        <h2 class="h3 fw-bold mb-4">My Portfolio</h2>
+        <div class="card bg-body-tertiary border-0 p-4 rounded-4 shadow-sm mb-5">
+            <p class="text-secondary mb-0">Total Value</p>
+            <p class="display-5 fw-bold">${formatCurrency(totalValue)}</p>
+            <p class="h5 fw-semibold ${getChangeClass(totalChange)}">${isPositive ? '+' : ''}${formatCurrency(totalChange)} Today</p>
+        </div>
+        <h3 class="h5 fw-bold mb-3">Your Assets</h3>
+        <div class="list-group">`;
+
+    assets.forEach(asset => {
+        content += `
+            <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="event.preventDefault(); showStockDetail('${asset.symbol}')">
+                <div>
+                    <img src="${asset.logo}" class="asset-logo me-3" alt="${asset.name}">
+                    <span class="fw-bold">${asset.symbol}</span>
+                    <small class="d-block text-secondary">${asset.name}</small>
+                </div>
+                <div class="text-end">
+                    <p class="fw-bold mb-0">${formatCurrency(asset.value)}</p>
+                    <small class="${getChangeClass(asset.d)}">${formatPercentage(asset.dp)}</small>
+                </div>
+            </a>`;
+    });
+    
+    content += `</div>`;
+    container.innerHTML = content;
+}
+
+async function renderNewsPage() {
+    const container = document.getElementById('news-content');
+    container.innerHTML = `<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+
+    const news = await getGeneralNews();
+    if (!news || news.length === 0) {
+        container.innerHTML = '<p>Could not load news.</p>';
+        return;
+    }
+
+    let content = `<h2 class="h3 fw-bold mb-4">Market News</h2>
+                   <div class="row g-4">`;
+
+    news.slice(0, 10).forEach(article => {
+        content += `
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <img src="${article.image}" class="card-img-top" alt="News Image">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold">${article.headline}</h5>
+                        <p class="card-text text-secondary small">${new Date(article.datetime * 1000).toLocaleDateString()}</p>
+                        <a href="${article.url}" target="_blank" class="btn btn-sm btn-outline-primary">Read More</a>
+                    </div>
+                </div>
             </div>`;
     });
     
-    // Recommended Investments
-    const recommendedContainer = document.getElementById('recommended-investments-container');
-    recommendedContainer.innerHTML = '';
-    mockUserPortfolio.assets.forEach(asset => {
-        const stock = mockStockData[asset.ticker];
-        const cardColor = stock.positive ? 'bg-green-100 dark:bg-green-900/40' : 'bg-red-100 dark:bg-red-900/40';
-        const textColor = stock.positive ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300';
-        recommendedContainer.innerHTML +=`
-            <div class="${cardColor} p-4 rounded-xl cursor-pointer" onclick="showStockDetail('${asset.ticker}')">
-               <span class="font-bold ${textColor}">${stock.name} (${asset.ticker})</span>
-            </div>`;
-    });
+    content += `</div>`;
+    container.innerHTML = content;
 }
 
-function showStockDetail(ticker, timeRange = '1D') {
-    currentStockTicker = ticker;
-    const stock = mockStockData[ticker];
-    if (!stock) return;
+function renderProfilePage() {
+    const container = document.getElementById('profile-content');
+    container.innerHTML = `
+        <h2 class="h3 fw-bold mb-4">Account Settings</h2>
+        <div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4">
+            <div class="d-flex align-items-center mb-4">
+                <img class="user-avatar-large rounded-circle" src="https://placehold.co/100x100/E2E8F0/4A5568?text=FA" alt="User profile picture">
+                <div class="ms-3">
+                    <h3 id="profile-fullname" class="h5 fw-bold mb-0">${state.user.fullName}</h3>
+                    <p id="profile-email" class="text-secondary small mb-0">${state.user.email}</p>
+                </div>
+            </div>
+            <button id="upgrade-btn" class="btn btn-warning fw-bold">Upgrade to Pro</button>
+        </div>
+        
+        <div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4">
+            <h4 class="h6 fw-bold mb-3">Settings</h4>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <label for="theme-toggle" class="form-check-label">Dark Mode</label>
+                <div class="form-check form-switch">
+                    <input type="checkbox" id="theme-toggle" class="form-check-input">
+                </div>
+            </div>
+             <div class="d-flex justify-content-between align-items-center">
+                <label for="currency-select" class="form-label mb-0">Currency</label>
+                <select id="currency-select" class="form-select w-auto">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                </select>
+            </div>
+        </div>
 
+        <div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4">
+            <h4 class="h6 fw-bold mb-3">Location</h4>
+            <div id="location-info" class="text-secondary">Detecting location...</div>
+        </div>
+        
+        <div class="d-grid">
+            <button id="logout-button" class="btn btn-danger">Log Out</button>
+        </div>
+    `;
+
+    // Re-add event listeners for newly created elements
+    document.getElementById('theme-toggle').checked = document.documentElement.dataset.bsTheme === 'dark';
+    document.getElementById('theme-toggle').addEventListener('change', toggleTheme);
+    document.getElementById('logout-button').addEventListener('click', () => navigateToPage('welcome-page'));
+    document.getElementById('upgrade-btn').addEventListener('click', () => navigateToPage('pro-page'));
+    
+    const currencySelect = document.getElementById('currency-select');
+    currencySelect.value = state.currency;
+    currencySelect.addEventListener('change', handleCurrencyChange);
+
+    getUserLocation();
+}
+
+// --- STOCK DETAIL PAGE ---
+async function showStockDetail(ticker) {
+    state.currentStock = ticker;
     navigateToPage('stock-detail-page');
+    
+    // Show spinner while loading
+    document.getElementById('detail-stock-name').innerText = 'Loading...';
+    document.getElementById('detail-stock-price').innerText = '';
+    document.getElementById('detail-stock-change').innerText = '';
 
-    document.getElementById('detail-stock-ticker-header').innerText = ticker;
-    document.getElementById('detail-stock-name').innerText = stock.name;
-    document.getElementById('detail-stock-price').innerText = `$${stock.price.toFixed(2)}`;
+    const quote = await getQuote(ticker);
+    const profile = await getProfile(ticker);
+
+    document.getElementById('detail-stock-ticker-header').innerText = profile.ticker || ticker;
+    document.getElementById('detail-stock-name').innerText = profile.name;
+    document.getElementById('detail-stock-price').innerText = formatCurrency(quote.c);
     
     const changeEl = document.getElementById('detail-stock-change');
-    changeEl.innerText = `${stock.positive ? '+' : ''}${stock.change.toFixed(2)} (${stock.changePercent}%)`;
-    changeEl.className = `text-lg font-semibold ${stock.positive ? 'text-brand-green' : 'text-brand-red'}`;
+    const isPositive = quote.d >= 0;
+    changeEl.innerText = `${isPositive ? '+' : ''}${quote.d.toFixed(2)} (${formatPercentage(quote.dp)})`;
+    changeEl.className = `h5 fw-semibold mb-2 ${getChangeClass(quote.d)}`;
 
-    updateStockChart(timeRange);
+    // Set active button and load chart
+    document.querySelector('#time-range-selector button[data-range="1Y"]').click();
+    
+    // Load company news
+    loadStockNews(ticker);
+}
 
-    document.querySelectorAll('#time-range-selector .time-button').forEach(button => {
-        button.classList.toggle('active', button.dataset.range === timeRange);
+async function loadStockNews(ticker) {
+    const container = document.getElementById('stock-news-list');
+    container.innerHTML = `<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>`;
+    const news = await getCompanyNews(ticker);
+    if (!news || news.length === 0) {
+        container.innerHTML = `<p class="text-secondary">No recent news found for ${ticker}.</p>`;
+        return;
+    }
+    
+    let content = '<div class="list-group">';
+    news.slice(0, 5).forEach(article => {
+        content += `
+            <a href="${article.url}" target="_blank" class="list-group-item list-group-item-action">
+                <p class="fw-bold mb-1">${article.headline}</p>
+                <small class="text-secondary">${new Date(article.datetime * 1000).toLocaleDateString()}</small>
+            </a>`;
     });
+    content += '</div>';
+    container.innerHTML = content;
 }
 
-function showPortfolioPage() {
-    updatePortfolioView('daily');
-    const container = document.getElementById('portfolio-assets-container');
-    container.innerHTML = '';
-    mockUserPortfolio.assets.forEach(asset => {
-        const stock = mockStockData[asset.ticker];
-        const isPositive = asset.changePercent >= 0;
-        container.innerHTML += `
-            <div class="bg-light-card dark:bg-dark-card p-4 rounded-xl shadow flex justify-between items-center cursor-pointer" onclick="showStockDetail('${asset.ticker}')">
-               <div>
-                   <p class="font-bold text-light-text dark:text-dark-text">${asset.ticker}</p>
-                   <p class="text-sm text-light-text-secondary dark:text-dark-text-secondary">${asset.shares} shares</p>
-               </div>
-               <div class="text-right">
-                   <p class="font-bold text-light-text dark:text-dark-text">$${asset.value.toLocaleString()}</p>
-                   <p class="text-sm font-semibold ${isPositive ? 'text-brand-green' : 'text-brand-red'}">${isPositive ? '+' : ''}${asset.changePercent}%</p>
-               </div>
-            </div>`;
-    });
+// --- CHARTING ---
+async function updateStockChart(range) {
+    if (!state.currentStock) return;
+    
+    const now = Math.floor(Date.now() / 1000);
+    let from, resolution;
+    switch(range) {
+        case '1D': from = now - (24 * 60 * 60); resolution = '15'; break;
+        case '1M': from = now - (30 * 24 * 60 * 60); resolution = 'D'; break;
+        case '3M': from = now - (90 * 24 * 60 * 60); resolution = 'D'; break;
+        case '1Y': from = now - (365 * 24 * 60 * 60); resolution = 'W'; break;
+    }
+
+    const candles = await getCandles(state.currentStock, resolution, from, now);
+    if(!candles || !candles.c) {
+        console.error("Could not fetch candle data");
+        return;
+    }
+    
+    const isPositive = candles.c[candles.c.length - 1] > candles.c[0];
+    createMainStockChart(candles.t.map(t => new Date(t*1000)), candles.c, isPositive);
 }
 
-function showNewsPage() {
-    const articlesContainer = document.getElementById('news-articles-container');
-    articlesContainer.innerHTML = '';
-    mockNewsData.forEach(article => {
-        articlesContainer.innerHTML += `
-            <div class="bg-light-card dark:bg-dark-card rounded-2xl shadow-lg overflow-hidden">
-                <img src="${article.imageUrl}" alt="${article.headline}" class="w-full h-48 object-cover">
-                <div class="p-6">
-                    <div class="flex items-center text-sm mb-2">
-                        <span class="px-2 py-1 bg-green-200 dark:bg-green-900/60 text-green-800 dark:text-green-300 rounded-md font-semibold cursor-pointer" onclick="showStockDetail('${article.ticker}')">${article.ticker}</span>
-                        <span class="ml-3 text-light-text-secondary dark:text-dark-text-secondary">${article.timestamp}</span>
-                    </div>
-                    <h3 class="text-xl font-bold mb-2 text-light-text dark:text-dark-text">${article.headline}</h3>
-                    <a href="#" class="font-semibold text-brand-green hover:underline">Read More &rarr;</a>
-                </div>
-            </div>`;
-    });
-}
-
-function showProfileSettingsPage() {
-    document.getElementById('profile-fullname').innerText = mockUser.fullName;
-    document.getElementById('profile-email').innerText = mockUser.email;
-}
-
-// --- CHARTING FUNCTIONS ---
-function createMainStockChart(canvasEl, chartConfig) {
+function createMainStockChart(labels, data, isPositive) {
+     const canvasEl = document.getElementById('mainStockChart');
      if (!canvasEl) return;
-     if(mainChartInstance) mainChartInstance.destroy();
-     const isDark = document.documentElement.classList.contains('dark');
+     if(state.chartInstances.main) state.chartInstances.main.destroy();
+
+     const isDark = document.documentElement.dataset.bsTheme === 'dark';
+     const borderColor = isPositive ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)';
      
      const ctx = canvasEl.getContext('2d');
-     const borderColor = chartConfig.positive ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)';
      const gradient = ctx.createLinearGradient(0, 0, 0, canvasEl.offsetHeight);
-     gradient.addColorStop(0, chartConfig.positive ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)');
-     gradient.addColorStop(1, isDark ? 'rgba(18, 18, 18, 0)' : 'rgba(243, 244, 246, 0)');
+     gradient.addColorStop(0, isPositive ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)');
+     gradient.addColorStop(1, isDark ? 'rgba(33, 37, 41, 0)' : 'rgba(248, 249, 250, 0)');
      
-     mainChartInstance = new Chart(ctx, {
+     state.chartInstances.main = new Chart(ctx, {
         type: 'line', 
-        data: { labels: chartConfig.labels, datasets: [{ label: 'Price', data: chartConfig.data, borderColor: borderColor, borderWidth: 3, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: gradient }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, displayColors: false, callbacks: { label: (context) => `$${context.parsed.y.toFixed(2)}` } } }, scales: { x: { display: false }, y: { display: false } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                label: 'Price', 
+                data: data, 
+                borderColor: borderColor, 
+                borderWidth: 2, 
+                pointRadius: 0, 
+                tension: 0.3, 
+                fill: true, 
+                backgroundColor: gradient 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+                legend: { display: false },
+                tooltip: { mode: 'index', intersect: false }
+            }, 
+            scales: { 
+                x: { display: false }, 
+                y: { display: false } 
+            } 
+        }
     });
 }
 
-function createPortfolioChart(data, isPositive) {
-    const canvasEl = document.getElementById('portfolioChart');
-    if (!canvasEl) return;
-    if (portfolioChartInstance) portfolioChartInstance.destroy();
-    
-    const ctx = canvasEl.getContext('2d');
-    const borderColor = isPositive ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)';
-    
-    portfolioChartInstance = new Chart(ctx, {
-        type: 'line', 
-        data: { labels: data.map((_, i) => i), datasets: [{ data: data, borderColor: borderColor, borderWidth: 2, pointRadius: 0, tension: 0.4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
-    });
-}
 
-// --- UPDATE FUNCTIONS ---
-function updateStockChart(timeRange) {
-    if (!currentStockTicker) return;
-    const stock = mockStockData[currentStockTicker];
-    const chartData = mockChartData[timeRange];
-    createMainStockChart(document.getElementById('mainStockChart'), { ...chartData, positive: stock.positive });
-}
-
-function updatePortfolioView(timespan) {
-    const data = mockUserPortfolio[timespan];
-    
-    document.querySelectorAll('.portfolio-timespan-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.span === timespan);
-    });
-
-    document.getElementById('portfolio-total-value').innerText = `$${data.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    
-    const changeEl = document.getElementById('portfolio-change');
-    const periodText = { 'daily': 'Today', 'weekly': 'This Week', 'monthly': 'This Month' }[timespan];
-    changeEl.innerText = `${data.positive ? '+' : ''}${data.changePercent}% ${periodText}`;
-    changeEl.className = `font-semibold ${data.positive ? 'text-brand-green' : 'text-brand-red'}`;
-    
-    createPortfolioChart(data.chartData, data.positive);
-}
-
-// --- THEME TOGGLE ---
-function setTheme(isDark) {
-    document.documentElement.classList.toggle('dark', isDark);
-    document.getElementById('theme-toggle').checked = isDark;
-    // Redraw charts on theme change to update gradients
-    if (currentStockTicker) updateStockChart(document.querySelector('#time-range-selector .active')?.dataset.range || '1D');
-    if (document.querySelector('.main-content-area#portfolio-content.active')) {
-        updatePortfolioView(document.querySelector('.portfolio-timespan-btn.active')?.dataset.span || 'daily');
+// --- EVENT HANDLERS & OTHER LOGIC ---
+function toggleTheme() {
+    const isDark = document.documentElement.dataset.bsTheme === 'dark';
+    document.documentElement.dataset.bsTheme = isDark ? 'light' : 'dark';
+    localStorage.setItem('theme', document.documentElement.dataset.bsTheme);
+    // Redraw chart with new theme
+    if(state.currentStock) {
+        document.querySelector('#time-range-selector .active')?.click();
     }
 }
 
-// --- INITIAL LOAD ---
+async function handleCurrencyChange(event) {
+    state.currency = event.target.value;
+    // Re-render the current view to update prices
+    const activeContent = document.querySelector('.main-content-area[style*="block"]');
+    if (activeContent) {
+        showMainContent(activeContent.id);
+    }
+}
+
+async function handleSearch() {
+    const query = document.getElementById('search-input').value;
+    const resultsContainer = document.getElementById('search-results');
+    if (query.length < 2) {
+        resultsContainer.innerHTML = '';
+        return;
+    }
+    const searchData = await searchSymbols(query);
+    if (!searchData || searchData.count === 0) {
+        resultsContainer.innerHTML = '<p class="text-secondary">No results found.</p>';
+        return;
+    }
+    
+    let content = '<div class="list-group">';
+    searchData.result.forEach(item => {
+        content += `
+            <a href="#" class="list-group-item list-group-item-action" 
+                data-ticker="${item.symbol}" 
+                onclick="event.preventDefault(); selectSearchResult(this.dataset.ticker)">
+                <div class="fw-bold">${item.symbol}</div>
+                <div class="small text-secondary">${item.description}</div>
+            </a>`;
+    });
+    content += '</div>';
+    resultsContainer.innerHTML = content;
+}
+
+function selectSearchResult(ticker) {
+    state.searchModal.hide();
+    showStockDetail(ticker);
+}
+
+function getUserLocation() {
+    const container = document.getElementById('location-info');
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                container.textContent = `Lat: ${latitude.toFixed(2)}, Lon: ${longitude.toFixed(2)}`;
+            },
+            (error) => {
+                container.textContent = "Could not retrieve location.";
+                console.error("Geolocation Error:", error);
+            }
+        );
+    } else {
+        container.textContent = "Geolocation is not supported by this browser.";
+    }
+}
+
+// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     document.getElementById('lets-go-btn').addEventListener('click', () => showAuthSubPage('login-page'));
@@ -285,30 +472,38 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-login-from-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('login-page'); });
     
     document.getElementById('back-to-dashboard-btn').addEventListener('click', () => navigateToPage('home-page'));
-    document.getElementById('logout-button').addEventListener('click', () => navigateToPage('welcome-page'));
+    document.getElementById('back-to-profile-btn').addEventListener('click', () => showMainContent('profile-content'));
 
-    document.querySelectorAll('#time-range-selector .time-button').forEach(button => {
-        button.addEventListener('click', (e) => updateStockChart(e.currentTarget.dataset.range));
+    document.querySelectorAll('#time-range-selector button').forEach(button => {
+        button.addEventListener('click', (e) => {
+            document.querySelectorAll('#time-range-selector button').forEach(btn => btn.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            updateStockChart(e.currentTarget.dataset.range);
+        });
     });
 
-    document.querySelectorAll('.portfolio-timespan-btn').forEach(button => {
-        button.addEventListener('click', (e) => updatePortfolioView(e.currentTarget.dataset.span));
+    document.getElementById('plan-toggle').addEventListener('change', (e) => {
+        const isYearly = e.currentTarget.checked;
+        document.getElementById('monthly-plan').classList.toggle('d-none', isYearly);
+        document.getElementById('yearly-plan').classList.toggle('d-none', !isYearly);
+        document.getElementById('upgrade-now-btn').classList.toggle('btn-warning', !isYearly);
+        document.getElementById('upgrade-now-btn').classList.toggle('btn-success', isYearly);
     });
+
+    document.getElementById('search-input').addEventListener('input', handleSearch);
 
     // --- Theme Setup ---
-    const themeToggle = document.getElementById('theme-toggle');
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDarkMode = savedTheme === 'dark' || (savedTheme === null && prefersDark);
-    setTheme(isDarkMode);
+    const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+    document.documentElement.dataset.bsTheme = theme;
 
-    themeToggle.addEventListener('change', () => {
-        const isDark = document.documentElement.classList.toggle('dark');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        setTheme(isDark);
-    });
-
+    // --- Bootstrap Modal instance ---
+    state.searchModal = new bootstrap.Modal(document.getElementById('searchModal'));
+    
     // --- Initial Page Load ---
+    getExchangeRates();
     navigateToPage('welcome-page');
-    showMainContent('markets-content'); // Pre-initialize dashboard
+    showMainContent('markets-content'); // Pre-select markets
+    document.getElementById('dashboard-username').innerText = state.user.fullName;
 });
