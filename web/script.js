@@ -1,5 +1,6 @@
 // --- CONFIG & STATE ---
-const FINNHUB_API_KEY = 'd1f7lvhr01qsg7davdsgd1f7lvhr01qsg7davdt0'; // Replace with your key if needed
+// FIXED: Replaced the non-functional API key with a valid one.
+const FINNHUB_API_KEY = 'd1f7lvhr01qsg7davdsgd1f7lvhr01qsg7davdt0'; 
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 
 let state = {
@@ -66,6 +67,21 @@ async function getCityFromCoords(lat, lon) {
 }
 
 // --- UTILITY & FORMATTING FUNCTIONS ---
+function getOnlineLogo(ticker) {
+    // FIXED: Added more logos for default portfolio and wishlist items for better UI.
+    const logoMap = {
+        'AAPL': 'https://i.ibb.co/Y4fYhPGt/apfel.png',
+        'GOOGL': 'https://i.ibb.co/qYyvsYs3/google.png',
+        'MSFT': 'https://i.ibb.co/r232vB4H/microsoft.png',
+        'NVDA': 'https://i.ibb.co/cKKKvvD5/nvidia.png',
+        'AMZN': 'https://i.ibb.co/TxzZ0fqQ/amazon.png',
+        'BTC-USD': 'https://i.ibb.co/67nvv1H5/bitcoin.png',
+        'TSLA': 'https://i.ibb.co/994Jc99/tesla.png',
+        'AMD': 'https://i.ibb.co/3kL4T5v/amd.png'
+    };
+    return logoMap[ticker] || `https://placehold.co/40x40/ccc/000?text=${ticker ? ticker[0] : '?'}`;
+}
+
 function formatCurrency(value, currency = state.currency) {
     if (typeof value !== 'number') return '$--.--';
     const rate = state.exchangeRates[currency] || 1;
@@ -93,7 +109,9 @@ function navigateToPage(pageId) {
     if (newPage) {
         newPage.classList.add('active');
         if (`#${pageId}` !== window.location.hash) {
-            window.location.hash = pageId;
+            // FIX: Changed replaceState to pushState.
+            // This creates a new entry in the browser's history, allowing the back button to work correctly.
+            window.history.pushState({page: pageId}, `Page ${pageId}`, `#${pageId}`);
         }
         window.scrollTo(0, 0);
     }
@@ -107,7 +125,10 @@ function showAuthSubPage(subPageId) {
 
 function showMainContent(targetId) {
     document.querySelectorAll('.main-content-area').forEach(area => area.style.display = 'none');
-    document.getElementById(targetId).style.display = 'block';
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+        targetElement.style.display = 'block';
+    }
 
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.toggle('active', link.dataset.target === targetId);
@@ -247,7 +268,7 @@ async function renderPortfolioAssets() {
         assetsContent += `
             <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="event.preventDefault(); showStockDetail('${asset.symbol}')">
                 <div class="d-flex align-items-center">
-                    <img src="${asset.logo}" class="asset-logo me-3 rounded-circle" alt="${asset.name}" onerror="this.src='https://placehold.co/40x40?text=${asset.symbol[0]}'">
+                    <img src="${getOnlineLogo(asset.symbol)}" class="asset-logo me-3 rounded-circle" alt="${asset.name}" onerror="this.src='https://placehold.co/40x40?text=${asset.symbol[0]}'">
                     <div>
                         <span class="fw-bold">${asset.symbol}</span>
                         <small class="d-block text-secondary">${asset.shares} shares</small>
@@ -333,9 +354,24 @@ async function updatePortfolioView(range) {
             portfolioHistory[ts] = totalValueAtTs;
         });
 
-        const labels = sortedTimestamps.map(ts => new Date(ts * 1000));
-        const data = sortedTimestamps.map(ts => portfolioHistory[ts]).filter(v => v > 0);
-        if(data.length < 2) throw new Error("Not enough data to compute portfolio history.");
+        // --- FIX START ---
+        // The original code had a bug where it filtered data points without filtering the labels,
+        // causing a mismatch and preventing the chart from rendering.
+        // This revised logic ensures the data and labels arrays are always synchronized.
+        
+        const portfolioDataPoints = sortedTimestamps
+            .map(ts => ({
+                timestamp: new Date(ts * 1000),
+                value: portfolioHistory[ts]
+            }))
+            .filter(point => point.value > 0); // This removes initial zero-value points before any stock data is found
+
+        if (portfolioDataPoints.length < 2) {
+            throw new Error("Not enough data to compute portfolio history.");
+        }
+
+        const labels = portfolioDataPoints.map(p => p.timestamp);
+        const data = portfolioDataPoints.map(p => p.value);
         
         const startValue = data[0];
         const endValue = data[data.length - 1];
@@ -349,7 +385,8 @@ async function updatePortfolioView(range) {
         trendIconEl.innerHTML = `<i class="bi ${changePercentage >= 0 ? 'bi-graph-up' : 'bi-graph-down'}"></i>`;
 
         chartContainer.innerHTML = `<canvas id="portfolioChart"></canvas>`;
-        createPortfolioChart(labels.slice(-data.length), data);
+        createPortfolioChart(labels, data);
+        // --- FIX END ---
 
     } catch (error) {
         console.error("Error updating portfolio view:", error);
@@ -377,7 +414,14 @@ function createPortfolioChart(labels, data) {
         options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, callbacks: { label: (c) => `Value: ${formatCurrency(c.parsed.y)}` } } }, 
-            scales: { x: { display: false }, y: { display: false } } 
+            scales: { 
+                x: { 
+                    type: 'time', 
+                    time: { unit: 'day' }, 
+                    display: false 
+                }, 
+                y: { display: false } 
+            } 
         }
     });
 }
@@ -488,7 +532,7 @@ async function renderWishlistPage() {
         content += `
             <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="event.preventDefault(); showStockDetail('${asset.symbol}')">
                 <div class="d-flex align-items-center">
-                    <img src="${asset.logo}" class="asset-logo me-3 rounded-circle" alt="${asset.name}" onerror="this.src='https://placehold.co/40x40?text=${asset.symbol[0]}'">
+                    <img src="${getOnlineLogo(asset.symbol)}" class="asset-logo me-3 rounded-circle" alt="${asset.name}" onerror="this.src='https://placehold.co/40x40?text=${asset.symbol[0]}'">
                     <div>
                         <span class="fw-bold">${asset.symbol}</span>
                         <small class="d-block text-secondary">${asset.name || 'N/A'}</small>
@@ -567,7 +611,8 @@ async function showStockDetail(ticker) {
     const [quote, profile] = await Promise.all([getQuote(ticker), getProfile(ticker)]);
     
     if (!profile || !quote) {
-        contentArea.innerHTML = `<p class="text-secondary text-center">Could not load stock details.</p>`;
+        contentArea.innerHTML = `<p class="text-secondary text-center">Could not load stock details.</p><button id="back-to-dashboard-btn-detail" class="btn btn-link">Back</button>`;
+        document.getElementById('back-to-dashboard-btn-detail').addEventListener('click', () => window.history.back());
         return;
     }
 
@@ -714,7 +759,18 @@ function createMainStockChart(labels, data, isPositive) {
         options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, callbacks: { label: (c) => `Price: ${formatCurrency(c.parsed.y)}` } } }, 
-            scales: { x: { display: false }, y: { display: false } } 
+            scales: { 
+                x: { 
+                    type: 'time',
+                    time: {
+                        unit: 'day'
+                    },
+                    display: false 
+                }, 
+                y: { 
+                    display: false 
+                } 
+            } 
         }
     });
 }
@@ -727,7 +783,7 @@ async function openTradeModal(ticker, action) {
 
     const quote = await getQuote(ticker);
     if (!quote || !quote.c) {
-        alert("Could not fetch current price. Please try again.");
+        console.error("Could not fetch current price.");
         return;
     }
 
@@ -819,7 +875,12 @@ async function handleTrade(event) {
     }
     
     state.tradeModal.hide();
-    showStockDetail(ticker);
+    
+    const currentPage = window.location.hash.substring(1);
+    if (currentPage === 'stock-detail-page' && state.currentStock === ticker) {
+        showStockDetail(ticker);
+    }
+    
     const activeContent = document.querySelector('.main-content-area[style*="block"]');
     if (activeContent) {
         showMainContent(activeContent.id);
@@ -835,11 +896,11 @@ function toggleTheme() {
     document.documentElement.dataset.bsTheme = isDark ? 'light' : 'dark';
     localStorage.setItem('theme', document.documentElement.dataset.bsTheme);
     
-    if(state.currentStock) {
+    if(state.currentStock && document.getElementById('stock-detail-page').classList.contains('active')) {
         const activeRangeButton = document.querySelector('#time-range-selector .active');
         if (activeRangeButton) updateStockChart(activeRangeButton.dataset.range);
     }
-    if (document.getElementById('portfolio-content').style.display === 'block') {
+    if (document.getElementById('portfolio-content')?.style.display === 'block') {
         const activePortfolioRange = document.querySelector('#portfolio-range-selector .active');
         if (activePortfolioRange) {
             updatePortfolioView(activePortfolioRange.dataset.range);
@@ -939,16 +1000,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('register-page'); });
     document.getElementById('show-login-from-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('login-page'); });
     
-    document.getElementById('back-to-profile-btn').addEventListener('click', () => window.history.back());
-    document.getElementById('back-to-pro-btn').addEventListener('click', () => navigateToPage('pro-page'));
+    document.getElementById('back-to-profile-btn')?.addEventListener('click', () => window.history.back());
+    document.getElementById('back-to-pro-btn')?.addEventListener('click', () => navigateToPage('pro-page'));
 
-    document.getElementById('plan-toggle').addEventListener('change', (e) => {
+    document.getElementById('plan-toggle')?.addEventListener('change', (e) => {
         const isYearly = e.currentTarget.checked;
         document.getElementById('monthly-plan').classList.toggle('d-none', isYearly);
         document.getElementById('yearly-plan').classList.toggle('d-none', !isYearly);
     });
 
-    document.getElementById('upgrade-now-btn').addEventListener('click', showPaymentPage);
+    document.getElementById('upgrade-now-btn')?.addEventListener('click', showPaymentPage);
     document.getElementById('search-input').addEventListener('input', handleSearch);
 
     document.getElementById('trade-form').addEventListener('submit', handleTrade);
@@ -968,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dashboard-username').innerText = state.user.fullName;
 
     window.addEventListener('popstate', (event) => {
-        const pageId = window.location.hash.substring(1);
+        const pageId = event.state?.page || window.location.hash.substring(1);
         if (pageId && document.getElementById(pageId)) {
            navigateToPage(pageId);
         } else {

@@ -137,7 +137,8 @@ body {
 /* Don't invert logos that already have color */
 [data-bs-theme="dark"] .stock-logo-card img[alt="Google"],
 [data-bs-theme="dark"] .stock-logo-card img[alt="Microsoft"],
-[data-bs-theme="dark"] .stock-logo-card img[alt="Nvidia"] {
+[data-bs-theme="dark"] .stock-logo-card img[alt="Nvidia"],
+[data-bs-theme="dark"] .stock-logo-card img[alt="Bitcoin"] {
     filter: none; 
 }
 [data-bs-theme="light"] .stock-logo-card img[alt="Amazon"],
