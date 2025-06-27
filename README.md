@@ -65,8 +65,7 @@ This repository is organized into two primary branches:
 
 > This project uses a free API key from Finnhub for demo purposes.
 
-```js
-// in script.js
+
 const FINNHUB_API_KEY = 'd1f7lvhr01qsg7davdsgd1f7lvhr01qsg7davdt0';
 ⚠️ For production, please register for your own free API key on Finnhub and replace the one above in script.js.
 
