@@ -23,97 +23,47 @@
             color: #D1D4DC;
         }
         /* Custom scrollbar for a better look */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1e222d;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4a4a4a;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #5a5a5a;
-        }
-        .text-green-custom {
-            color: #26A69A;
-        }
-        .text-red-custom {
-            color: #EF5350;
-        }
-        .bg-green-custom {
-            background-color: #26A69A;
-        }
-        .bg-red-custom {
-            background-color: #EF5350;
-        }
-        .border-green-custom {
-            border-color: #26A69A;
-        }
-        .border-red-custom {
-            border-color: #EF5350;
-        }
-        /* Hide scrollbar for horizontal scrolling sections, but keep functionality */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        /* Page container for centering auth pages */
-        .page-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 1.5rem;
-        }
-        /* Full screen page style */
-        .page-full {
-             min-height: 100vh;
-             display: flex;
-             flex-direction: column;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #1e222d; }
+        ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }
+        .text-green-custom { color: #26A69A; }
+        .text-red-custom { color: #EF5350; }
+        .bg-green-custom { background-color: #26A69A; }
+        .bg-red-custom { background-color: #EF5350; }
+        .border-green-custom { border-color: #26A69A; }
+        .border-red-custom { border-color: #EF5350; }
+        /* Hide scrollbar, but keep functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Page containers */
+        .page-container { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; padding: 1.5rem; }
+        .page-full { min-height: 100vh; display: flex; flex-direction: column; }
+        .page-with-nav { padding-bottom: 80px; } /* Add padding for the fixed bottom nav */
         /* Common input style */
-        .form-input {
-            background-color: #2a303b;
-            border: 1px solid #4a5568;
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            width: 100%;
-            color: white;
-        }
-        .form-input::placeholder {
-            color: #a0aec0;
-        }
-        .form-input:focus {
-            outline: none;
-            border-color: #4299e1;
-            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
-        }
-        /* Style for active time button */
-        .time-button-active {
-            background-color: #374151;
-            color: #ffffff;
-        }
+        .form-input { background-color: #2a303b; border: 1px solid #4a5568; border-radius: 0.5rem; padding: 0.75rem 1rem; width: 100%; color: white; }
+        .form-input::placeholder { color: #a0aec0; }
+        .form-input:focus { outline: none; border-color: #4299e1; box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5); }
+        /* Active button styles */
+        .time-button-inactive { background-color: #374151; color: #ffffff; }
+        .tab-active { color: #ffffff; border-bottom: 2px solid #26A69A; }
+        .nav-item-active { color: #26A69A; }
+        .nav-item-active svg, .nav-item-active span { color: #26A69A; }
+        .news-filter-active { background-color: #26A69A; color: white; }
+        /* Toggle Switch */
+        .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; background: white; border-radius: 50%; width: 1.25rem; height: 1.25rem; transition: .2s; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #26A69A; }
+        .toggle-checkbox:checked + .toggle-label::after { transform: translateX(100%); border-color: white; }
     </style>
 </head>
 <body class="overflow-x-hidden">
     <div id="app-container">
 
         <div id="welcome-page" class="page-container text-center">
-            <div class="mb-8">
-                <img src="https://i.ibb.co/k3CBgB9/stockly-logo.png" alt="Stockly Logo" class="w-24 h-24 mx-auto">
-            </div>
+            <div class="mb-8"><img src="https://i.ibb.co/k3CBgB9/stockly-logo.png" alt="Stockly Logo" class="w-24 h-24 mx-auto"></div>
             <h1 class="text-4xl font-bold text-white mb-2">Welcome to Stockly</h1>
             <p class="text-lg text-gray-400 mb-12">Your personal gateway to smarter investing.</p>
-            <button onclick="showPage('login-page')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg w-full max-w-sm">
-                Let's Go &rarr;
-            </button>
+            <button onclick="showPage('login-page')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg w-full max-w-sm">Let's Go &rarr;</button>
         </div>
 
         <div id="login-page" class="page-container hidden">
@@ -121,22 +71,11 @@
                 <img src="https://i.ibb.co/k3CBgB9/stockly-logo.png" alt="Stockly Logo" class="w-16 h-16 mx-auto mb-4">
                 <h2 class="text-2xl font-bold text-center text-white mb-2">Stockly</h2>
                 <p class="text-center text-gray-400 mb-8">Your gateway to what's investing.</p>
-                <form onsubmit="event.preventDefault(); showPage('home-page-wrapper');">
-                    <div class="mb-4">
-                        <input type="email" placeholder="Email address" class="form-input" required>
-                    </div>
-                    <div class="mb-6">
-                        <input type="password" placeholder="Password" class="form-input" required>
-                    </div>
+                <form onsubmit="event.preventDefault(); showPage('home-page-wrapper', 'nav-markets');">
+                    <div class="mb-4"><input type="email" placeholder="Email address" class="form-input" required></div>
+                    <div class="mb-6"><input type="password" placeholder="Password" class="form-input" required></div>
                     <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg w-full mb-4">Login</button>
                 </form>
-                <div class="text-center text-gray-500 mb-4">or continue with</div>
-                <div class="flex flex-col space-y-3 mb-6">
-                    <button class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg flex items-center justify-center">
-                        <svg class="h-6 w-6 mr-3" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>
-                        Google
-                    </button>
-                </div>
                 <div class="text-center">
                     <a href="#" onclick="showPage('register-page')" class="text-green-500 hover:text-green-400">Don't have an account? Register here</a>
                     <span class="text-gray-500 mx-2">|</span>
@@ -145,262 +84,484 @@
              </div>
         </div>
 
-        <div id="register-page" class="page-container hidden">...</div>
-        <div id="registration-success-page" class="page-container text-center hidden">...</div>
-        <div id="reset-password-page" class="page-container hidden">...</div>
-        <div id="reset-code-page" class="page-container hidden">...</div>
-        <div id="new-password-page" class="page-container hidden">...</div>
-
-        <div id="home-page-wrapper" class="min-h-screen pb-24 hidden">
-             <main class="p-4 md:p-6">
-                 <header class="flex justify-between items-center mb-6">
-                     <div class="flex items-center space-x-3">
-                         <img src="https://placehold.co/40x40/7c3aed/ffffff?text=FA" alt="User Avatar" class="rounded-full">
-                         <div>
-                             <p class="text-sm text-gray-400">Good morning</p>
-                             <h1 class="font-bold text-lg text-white">Fadi Abbara</h1>
-                         </div>
-                     </div>
-                     <div class="flex items-center space-x-4">
-                          <button class="text-gray-400 hover:text-white"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></button>
-                          <button class="text-gray-400 hover:text-white"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg></button>
-                     </div>
-                 </header>
-
-                 <div class="bg-[#1e222d] p-5 rounded-xl mb-6">
-                     <p class="text-sm text-gray-400">Your Portfolio</p>
-                     <div class="flex justify-between items-center">
-                         <p class="text-3xl font-bold text-white">$25,840.75</p>
-                         <p class="text-green-custom font-semibold">+3.2% Today</p>
-                     </div>
-                 </div>
-
-                 <div class="mb-6">
-                     <h2 class="text-lg font-semibold mb-3 text-white">Market Indices</h2>
-                     <div id="market-indices-container" class="grid grid-cols-2 gap-4">
-                         </div>
-                 </div>
-                 
-                 <div class="mb-6">
-                       <h2 class="text-lg font-semibold mb-3 text-white">Recommended Investments</h2>
-                       <div class="flex overflow-x-auto space-x-4 pb-2 no-scrollbar">
-                           <div class="flex-shrink-0 w-40 bg-[#1e222d] p-3 rounded-lg text-center">
-                               <img src="https://placehold.co/100x60/34d399/131722?text=Eco" alt="Investment" class="rounded-md mx-auto mb-2">
-                               <p class="font-semibold text-sm">Eco Friendly</p>
-                           </div>
-                            <div class="flex-shrink-0 w-40 bg-[#1e222d] p-3 rounded-lg text-center">
-                               <img src="https://placehold.co/100x60/60a5fa/131722?text=Tech" alt="Investment" class="rounded-md mx-auto mb-2">
-                               <p class="font-semibold text-sm">Tech Giants</p>
-                           </div>
-                           <div class="flex-shrink-0 w-40 bg-[#1e222d] p-3 rounded-lg text-center">
-                               <img src="https://placehold.co/100x60/f87171/131722?text=Health" alt="Investment" class="rounded-md mx-auto mb-2">
-                               <p class="font-semibold text-sm">Healthcare</p>
-                           </div>
-                           <div class="flex-shrink-0 w-40 bg-[#1e222d] p-3 rounded-lg text-center">
-                               <img src="https://placehold.co/100x60/fbbf24/131722?text=Energy" alt="Investment" class="rounded-md mx-auto mb-2">
-                               <p class="font-semibold text-sm">Energy Sector</p>
-                           </div>
-                       </div>
-                 </div>
-
-                 <div>
-                      <h2 class="text-lg font-semibold mb-3 text-white">Stocks</h2>
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="stocks-container">
-                          </div>
-                  </div>
-             </main>
-
-             <footer class="fixed bottom-0 left-0 right-0 bg-[#1e222d] border-t border-gray-700 flex justify-around p-2">
-                </footer>
+        <div id="register-page" class="page-container hidden">
+            <div class="w-full max-w-sm">
+                <h2 class="text-3xl font-bold text-center text-white mb-6">Registration</h2>
+                <form onsubmit="event.preventDefault(); showPage('registration-success-page');">
+                    <div class="mb-4"><input type="text" placeholder="Full Name" class="form-input" required></div>
+                    <div class="mb-4"><input type="tel" placeholder="Phone Number" class="form-input" required></div>
+                    <div class="mb-4"><input type="email" placeholder="Email Address" class="form-input" required></div>
+                    <div class="mb-6"><input type="password" placeholder="Password" class="form-input" required></div>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg w-full mb-4">Register</button>
+                </form>
+                <p class="text-center mt-6"><a href="#" onclick="showPage('login-page')" class="text-green-500 hover:text-green-400">Already have an account? Log in</a></p>
+            </div>
+        </div>
+        
+        <div id="registration-success-page" class="page-container text-center hidden">
+             <div class="bg-[#1e222d] p-10 rounded-xl max-w-sm w-full">
+                <div class="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-4">Registration successful</h2>
+                <button onclick="showPage('login-page')" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg w-full">Log in &rarr;</button>
+             </div>
+        </div>
+        
+        <div id="reset-password-page" class="page-container hidden">
+             <div class="w-full max-w-sm">
+                <h2 class="text-3xl font-bold text-center text-white mb-6">Password reset</h2>
+                <form onsubmit="event.preventDefault(); showPage('reset-code-page');">
+                 <div class="mb-6"><input type="email" placeholder="Email Address" class="form-input" required></div>
+                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg w-full">Send code</button>
+                </form>
+                 <p class="text-center mt-6"><a href="#" onclick="showPage('login-page')" class="text-green-500 hover:text-green-400">&larr; Back to Login</a></p>
+             </div>
         </div>
 
+        <div id="reset-code-page" class="page-container hidden">
+             <div class="w-full max-w-sm">
+                <h2 class="text-3xl font-bold text-center text-white mb-6">Password reset</h2>
+                 <form onsubmit="event.preventDefault(); showPage('new-password-page');">
+                    <div class="mb-4"><input type="text" placeholder="Enter code" class="form-input" required></div>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg w-full mb-4">Confirm</button>
+                 </form>
+                 <p class="text-center mt-6"><a href="#" onclick="showPage('reset-password-page')" class="text-green-500 hover:text-green-400">&larr; Change email</a></p>
+             </div>
+        </div>
+        
+        <div id="new-password-page" class="page-container hidden">
+            <div class="w-full max-w-sm">
+                <h2 class="text-3xl font-bold text-center text-white mb-6">Password reset</h2>
+                <form onsubmit="event.preventDefault(); showPage('login-page');">
+                 <div class="mb-4"><input type="password" placeholder="New Password" class="form-input" required></div>
+                 <div class="mb-6"><input type="password" placeholder="Repeat password" class="form-input" required></div>
+                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg w-full">Confirm</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="home-page-wrapper" class="hidden page-with-nav">
+             <main class="p-4 space-y-6">
+                <header class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <img id="home-avatar" class="w-12 h-12 rounded-full" src="https://i.pravatar.cc/150?u=fadiabbara" alt="User Avatar">
+                        <div>
+                            <p class="text-sm text-gray-400">Good morning</p>
+                            <p id="home-username" class="font-bold text-lg text-white"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="text-gray-400 hover:text-white relative">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                           </svg>
+                           <span class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-gray-800"></span>
+                        </button>
+                        <button class="text-gray-400 hover:text-white">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                           </svg>
+                        </button>
+                    </div>
+                </header>
+                <div class="grid grid-cols-2 gap-4">
+                    <div id="home-portfolio-card" class="bg-[#1e222d] p-4 rounded-xl"></div>
+                    <div id="home-trending-card" class="bg-[#1e222d] p-4 rounded-xl"></div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white mb-3">Market Indices</h2>
+                    <div id="market-indices-container" class="grid grid-cols-2 gap-4"></div>
+                </div>
+                 <div>
+                    <h2 class="text-xl font-bold text-white mb-3">Recommended investments</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-500/30 backdrop-blur-sm p-4 rounded-xl h-20 flex items-end justify-between"><span class="font-bold text-white/50">XXXX</span><svg class="w-12 h-6 text-red-500/50" viewBox="0 0 50 20"><path d="M0 15 L5 10 L10 18 L15 12 L20 16 L25 8 L30 14 L35 10 L40 15 L45 5 L50 12" fill="none" stroke="currentColor" stroke-width="2"></path></svg></div>
+                        <div class="bg-gray-500/30 backdrop-blur-sm p-4 rounded-xl h-20 flex items-end justify-between"><span class="font-bold text-white/50">XXXX</span><svg class="w-12 h-6 text-green-500/50" viewBox="0 0 50 20"><path d="M0 10 L5 15 L10 8 L15 12 L20 9 L25 14 L30 8 L35 12 L40 9 L45 18 L50 12" fill="none" stroke="currentColor" stroke-width="2"></path></svg></div>
+                        <div class="bg-gray-500/30 backdrop-blur-sm p-4 rounded-xl h-20 flex items-end justify-between"><span class="font-bold text-white/50">XXXX</span><svg class="w-12 h-6 text-green-500/50" viewBox="0 0 50 20"><path d="M0 10 L5 15 L10 8 L15 12 L20 9 L25 14 L30 8 L35 12 L40 9 L45 18 L50 12" fill="none" stroke="currentColor" stroke-width="2"></path></svg></div>
+                        <div class="bg-gray-500/30 backdrop-blur-sm p-4 rounded-xl h-20 flex items-end justify-between"><span class="font-bold text-white/50">XXXX</span><svg class="w-12 h-6 text-green-500/50" viewBox="0 0 50 20"><path d="M0 10 L5 15 L10 8 L15 12 L20 9 L25 14 L30 8 L35 12 L40 9 L45 18 L50 12" fill="none" stroke="currentColor" stroke-width="2"></path></svg></div>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white mb-4">Stocks</h2>
+                    <div id="stocks-logo-container" class="grid grid-cols-3 gap-4 items-center"></div>
+                </div>
+             </main>
+             <footer class="fixed-nav-bar"></footer>
+        </div>
+        
         <div id="stock-detail-page" class="page-full hidden">
             <header class="flex-shrink-0 flex justify-between items-center p-4">
-                <button onclick="showPage('home-page-wrapper')" class="p-2 rounded-full hover:bg-gray-700">
+                <button onclick="showPage('home-page-wrapper', 'nav-markets')" class="p-2 rounded-full hover:bg-gray-700">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
                 </button>
-                <h1 id="detail-stock-ticker-header" class="text-lg font-bold text-white">Stock</h1>
-                <div class="w-10"></div> </header>
-
+                <h1 id="detail-stock-ticker-header" class="text-lg font-bold text-white"></h1>
+                <div class="w-10"></div>
+            </header>
             <main class="flex-grow p-4 space-y-6">
                 <div>
-                    <p id="detail-stock-name" class="text-gray-400 text-lg">Apple Inc.</p>
-                    <p id="detail-stock-price" class="text-white text-4xl font-bold">$175.25</p>
+                    <p id="detail-stock-name" class="text-gray-400 text-lg"></p>
+                    <p id="detail-stock-price" class="text-white text-4xl font-bold"></p>
                 </div>
-
-                <div class="h-64">
-                    <canvas id="mainStockChart"></canvas>
-                </div>
-
+                <div class="h-64"><canvas id="mainStockChart"></canvas></div>
                 <div class="flex justify-around bg-[#1e222d] p-1 rounded-lg">
-                    <button class="px-3 py-1 text-sm rounded-md time-button-active">1H</button>
+                    <button class="px-3 py-1 text-sm rounded-md time-button-inactive">1H</button>
                     <button class="px-3 py-1 text-sm rounded-md text-gray-400 hover:bg-gray-700">1D</button>
                     <button class="px-3 py-1 text-sm rounded-md text-gray-400 hover:bg-gray-700">1W</button>
-                    <button class="px-3 py-1 text-sm rounded-md text-gray-400 hover:bg-gray-700">1M</button>
-                    <button class="px-3 py-1 text-sm rounded-md text-gray-400 hover:bg-gray-700">1Y</button>
-                    <button class="px-3 py-1 text-sm rounded-md text-gray-400 hover:bg-gray-700">ALL</button>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 text-white">
-                    <div class="bg-[#1e222d] p-3 rounded-lg">
-                        <p class="text-sm text-gray-400">Open</p>
-                        <p id="stat-open" class="font-semibold">$174.50</p>
-                    </div>
-                    <div class="bg-[#1e222d] p-3 rounded-lg">
-                        <p class="text-sm text-gray-400">High</p>
-                        <p id="stat-high" class="font-semibold">$176.10</p>
-                    </div>
-                    <div class="bg-[#1e222d] p-3 rounded-lg">
-                        <p class="text-sm text-gray-400">Low</p>
-                        <p id="stat-low" class="font-semibold">$173.90</p>
-                    </div>
-                    <div class="bg-[#1e222d] p-3 rounded-lg">
-                        <p class="text-sm text-gray-400">Volume</p>
-                        <p id="stat-volume" class="font-semibold">58.3M</p>
-                    </div>
                 </div>
             </main>
-
             <footer class="flex-shrink-0 grid grid-cols-2 gap-4 p-4 sticky bottom-0 bg-[#131722]">
                 <button id="detail-buy-btn" class="w-full bg-green-custom text-white font-bold py-3 rounded-lg">Buy</button>
                 <button id="detail-sell-btn" class="w-full bg-red-custom text-white font-bold py-3 rounded-lg">Sell</button>
             </footer>
         </div>
 
-        <div id="buy-page" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div id="buy-page" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm items-center justify-center p-4">
             <div class="bg-[#1e222d] rounded-2xl w-full max-w-sm p-6 text-center">
                  <button onclick="showStockDetail(currentStockTicker)" class="absolute top-4 left-4 p-2 text-gray-400 hover:text-white">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-                <h2 class="text-2xl font-bold text-white mb-6">Buy <span id="buy-ticker"></span></h2>
-                <p class="text-gray-400 mb-2">How much are you buying?</p>
-                <input type="text" value="$100.00" class="form-input text-4xl font-bold text-center h-20 mb-6 bg-transparent border-0 focus:ring-0">
-                <div class="grid grid-cols-4 gap-3 mb-8">
-                    <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">$100</button>
-                    <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">$500</button>
-                    <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">$1000</button>
-                    <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">$5000</button>
-                </div>
-                <button onclick="alert('Purchase complete!'); showStockDetail(currentStockTicker);" class="w-full bg-green-custom text-white font-bold py-3 rounded-lg">Buy</button>
+                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                 </button>
+                 <h2 class="text-2xl font-bold text-white mb-6">Buy <span id="buy-ticker"></span></h2>
+                 <p class="text-gray-400 mb-2">How much are you buying?</p>
+                 <input type="text" value="$100.00" class="form-input text-4xl font-bold text-center h-20 mb-6 bg-transparent border-0 focus:ring-0">
+                 <div class="grid grid-cols-4 gap-3 mb-8">
+                     <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">$100</button>
+                     <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">$500</button>
+                     <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">$1000</button>
+                     <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">$5000</button>
+                 </div>
+                 <button onclick="alert('Purchase complete!'); showStockDetail(currentStockTicker);" class="w-full bg-green-custom text-white font-bold py-3 rounded-lg">Buy</button>
             </div>
         </div>
-
-        <div id="sell-page" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        
+        <div id="sell-page" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm items-center justify-center p-4">
             <div class="bg-[#1e222d] rounded-2xl w-full max-w-sm p-6 text-center">
                  <button onclick="showStockDetail(currentStockTicker)" class="absolute top-4 left-4 p-2 text-gray-400 hover:text-white">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-                <h2 class="text-2xl font-bold text-white mb-6">Sell <span id="sell-ticker"></span></h2>
-                <p class="text-gray-400 mb-2">How much are you selling?</p>
-                <input type="text" value="$50.00" class="form-input text-4xl font-bold text-center h-20 mb-6 bg-transparent border-0 focus:ring-0">
-                <div class="grid grid-cols-2 gap-3 mb-8">
-                    <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">50%</button>
-                    <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">100%</button>
-                </div>
-                <button onclick="alert('Sale complete!'); showStockDetail(currentStockTicker);" class="w-full bg-red-custom text-white font-bold py-3 rounded-lg">Sell</button>
+                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                 </button>
+                 <h2 class="text-2xl font-bold text-white mb-6">Sell <span id="sell-ticker"></span></h2>
+                 <p class="text-gray-400 mb-2">How much are you selling?</p>
+                 <input type="text" value="$50.00" class="form-input text-4xl font-bold text-center h-20 mb-6 bg-transparent border-0 focus:ring-0">
+                 <div class="grid grid-cols-2 gap-3 mb-8">
+                     <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">50%</button>
+                     <button class="bg-gray-600/50 p-2 rounded-md hover:bg-gray-500/50">100%</button>
+                 </div>
+                 <button onclick="alert('Sale complete!'); showStockDetail(currentStockTicker);" class="w-full bg-red-custom text-white font-bold py-3 rounded-lg">Sell</button>
             </div>
         </div>
+        
+        <div id="pro-page" class="hidden page-with-nav">
+             <main class="p-6 space-y-8">
+                 <h1 class="text-3xl font-bold text-white text-center">Upgrade to Pro</h1>
+                 <div class="flex items-center justify-center space-x-4">
+                     <span id="monthly-label" class="font-semibold text-white">Monthly</span>
+                     <div class="relative inline-block w-12 align-middle select-none transition duration-200 ease-in">
+                         <input type="checkbox" name="toggle" id="plan-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" onchange="toggleProPlan()"/>
+                         <label for="plan-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-600 cursor-pointer"></label>
+                     </div>
+                     <span id="yearly-label" class="font-semibold text-gray-400">Yearly</span>
+                 </div>
+                 <div id="pro-card" class="bg-[#1e222d] p-6 rounded-2xl text-center space-y-6">
+                     <div id="price-display">
+                         <p class="text-5xl font-bold text-white">$12</p>
+                         <p class="text-gray-400">per month</p>
+                     </div>
+                     <button onclick="showPage('subscription-page', 'nav-profile')" class="bg-green-custom hover:bg-green-700 text-white font-bold py-3 rounded-lg w-full">Upgrade Now</button>
+                 </div>
+             </main>
+             <footer class="fixed-nav-bar"></footer>
+        </div>
 
+        <div id="subscription-page" class="page-full hidden">
+            <header class="flex-shrink-0 flex items-center p-4">
+                <button onclick="showPage('pro-page', 'nav-profile')" class="p-2 rounded-full hover:bg-gray-700">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+            </header>
+            <main class="flex-grow p-6 space-y-6">
+                <h1 class="text-3xl font-bold text-white text-center">Subscription</h1>
+                <div id="payment-methods-list" class="space-y-3"></div>
+                <button onclick="alert('Payment Successful!')" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-lg w-full">Buy Now</button>
+            </main>
+        </div>
+        
+        <div id="etf-detail-page" class="hidden page-with-nav">
+             <main class="p-4 space-y-6">
+             </main>
+             <footer class="fixed-nav-bar"></footer>
+        </div>
+
+        <div id="portfolio-page" class="hidden page-with-nav">
+            <main class="p-4 space-y-6">
+                <div class="bg-[#131722]"> 
+                    <h1 class="text-xl font-bold text-white mb-3">Portfolio</h1>
+                    <p class="text-sm text-gray-400">Portfolio Value</p>
+                    <div class="flex justify-between items-center mb-4">
+                        <p id="portfolio-total-value" class="text-3xl font-bold text-white"></p>
+                        <p id="portfolio-change" class="font-semibold text-lg"></p>
+                    </div>
+                </div>
+                <div class="flex bg-[#1e222d] p-1 rounded-lg">
+                    <button onclick="updatePortfolioView('daily')" id="portfolio-btn-daily" class="w-full py-1.5 text-sm rounded-md text-white">Daily</button>
+                    <button onclick="updatePortfolioView('weekly')" id="portfolio-btn-weekly" class="w-full py-1.5 text-sm rounded-md text-gray-400">Weekly</button>
+                    <button onclick="updatePortfolioView('monthly')" id="portfolio-btn-monthly" class="w-full py-1.5 text-sm rounded-md text-gray-400">Monthly</button>
+                </div>
+                <div class="h-56"><canvas id="portfolioChart"></canvas></div>
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-3">Your Assets</h2>
+                    <div id="portfolio-assets-container" class="space-y-3"></div>
+                </div>
+            </main>
+            <footer class="fixed-nav-bar"></footer>
+        </div>
+        
+        <div id="watchlist-page" class="hidden page-with-nav">
+            <main class="p-4 space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p id="watchlist-greeting" class="text-gray-400"></p>
+                        <h1 class="text-2xl font-bold text-white">Watchlist</h1>
+                    </div>
+                    <button class="text-gray-400 hover:text-white p-2 bg-[#1e222d] rounded-full"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></button>
+                </div>
+                <div id="watchlist-container" class="space-y-2"></div>
+            </main>
+            <footer class="fixed-nav-bar"></footer>
+        </div>
+
+        <div id="profile-settings-page" class="hidden page-with-nav">
+            <main class="p-4 space-y-6">
+                <h1 class="text-2xl font-bold text-white text-center">Account Settings</h1>
+                <div class="flex justify-between border-b border-gray-700 px-2">
+                    <button class="py-2 px-3 text-sm font-semibold tab-active">Profile</button>
+                    <button class="py-2 px-3 text-sm font-semibold text-gray-400">Security</button>
+                    <button class="py-2 px-3 text-sm font-semibold text-gray-400">Preferences</button>
+                    <button class="py-2 px-3 text-sm font-semibold text-gray-400">Linked Accounts</button>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                         <h2 class="text-lg font-bold text-white">Profile Information</h2>
+                         <button class="text-green-custom font-semibold">Edit</button>
+                    </div>
+                    <div class="flex flex-col items-center space-y-4 p-4">
+                        <div class="w-24 h-24 bg-gray-600 rounded-full flex items-center justify-center">
+                            <span id="profile-initials" class="text-4xl font-bold text-white"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400">Full Name</label>
+                        <p id="profile-fullname" class="text-white bg-[#1e222d] p-3 rounded-lg mt-1"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400">Email Address</label>
+                        <p id="profile-email" class="text-white bg-[#1e222d] p-3 rounded-lg mt-1"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400">Phone Number</label>
+                        <p id="profile-phone" class="text-white bg-[#1e222d] p-3 rounded-lg mt-1"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-400">Bio</label>
+                        <p id="profile-bio" class="text-white bg-[#1e222d] p-3 rounded-lg mt-1 h-20"></p>
+                    </div>
+                </div>
+                 <button onclick="showPage('pro-page', 'nav-profile')" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-lg flex items-center justify-center space-x-2">
+                     <span>Upgrade to Pro</span>
+                 </svg>
+                 </button>
+            </main>
+            <footer class="fixed-nav-bar"></footer>
+        </div>
+
+        <div id="news-page" class="hidden page-with-nav">
+             <main class="p-4 space-y-4">
+                <header class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-white">News & Insights</h1>
+                    <button class="text-gray-400 hover:text-white p-2 bg-[#1e222d] rounded-full">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                </header>
+                <div id="news-filter-container" class="flex space-x-2 overflow-x-auto no-scrollbar py-2"></div>
+                <div id="news-articles-container" class="space-y-4"></div>
+             </main>
+             <footer class="fixed-nav-bar"></footer>
+        </div>
 
     </div>
 
     <script>
-        // --- State Management & Mock Data ---
+        // --- STATE & MOCK DATA ---
         let currentStockTicker = null;
         let mainChartInstance = null;
+        let portfolioChartInstance = null;
+        let activeNewsFilter = 'All News';
+        const newsFilters = ['All News', 'Trending', 'AAPL', 'TSLA', 'MSFT'];
 
-        const mockStockData = {
-            'AAPL': { 
-                name: 'Apple Inc.', 
-                price: 175.25, 
-                change: 2.15,
-                changePercent: 1.24,
-                positive: true,
-                stats: { open: 174.50, high: 176.10, low: 173.90, volume: "58.3M" },
-                chartData: [170, 172, 171, 173, 175, 174, 175.5, 176, 175, 175.25]
-            },
-            'GOOG': { 
-                name: 'Alphabet Inc.', 
-                price: 2910.45,
-                change: -15.80,
-                changePercent: -0.54,
-                positive: false,
-                stats: { open: 2925.00, high: 2930.10, low: 2905.50, volume: "1.2M" },
-                chartData: [2940, 2935, 2930, 2920, 2915, 2910, 2912, 2908, 2911, 2910.45]
-            },
-            'NVDA': { 
-                name: 'Nvidia Corporation', 
-                price: 780.12,
-                change: 12.50,
-                changePercent: 1.63,
-                positive: true,
-                stats: { open: 770.00, high: 785.60, low: 768.20, volume: "45.7M" },
-                chartData: [760, 765, 762, 770, 775, 772, 778, 782, 781, 780.12]
-            },
-             'AMZN': { 
-                name: 'Amazon.com, Inc.', 
-                price: 185.30,
-                change: -1.10,
-                changePercent: -0.59,
-                positive: false,
-                stats: { open: 186.00, high: 187.20, low: 184.80, volume: "33.1M" },
-                chartData: [188, 187, 186.5, 186, 185, 185.5, 186, 185.2, 185.4, 185.30]
-            }
+        const mockUser = { fullName: 'Fadi Abbara', initials: 'FA', email: 'fadi@stockly.com', phone: '123456789', bio: 'someone who is done' };
+        
+        const mockDashboardData = {
+            portfolio: { value: 25840.75, changePercent: 3.2, positive: true },
+            trending: { name: 'Apple', symbol: 'AAPL', price: 238.45, changePercent: -4.2, positive: false },
+            indices: [
+                { name: 'Nasdaq', value: '14,500.3', positive: true, id: 'idx-nasdaq' },
+                { name: 'AAPL', value: '145.32', positive: true, id: 'idx-aapl' },
+                { name: 'S&P 500', value: '4,500.75', positive: false, id: 'idx-sp500' },
+                { name: 'BA', value: '155,52', positive: true, id: 'idx-ba' },
+            ],
+            stocks: [
+                { name: 'Apple', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' },
+                { name: 'Google', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg' },
+                { name: 'Microsoft', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg' },
+                { name: 'Nvidia', logoUrl: 'https://upload.wikimedia.org/wikipedia/en/2/21/Nvidia_logo.svg' },
+                { name: 'Amazon', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg' },
+                { name: 'Bitcoin', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg' },
+            ]
         };
 
-        const allPages = ['welcome-page', 'login-page', 'register-page', 'registration-success-page', 'reset-password-page', 'reset-code-page', 'new-password-page', 'home-page-wrapper', 'stock-detail-page', 'buy-page', 'sell-page'];
+        const mockStockData = {
+            'AAPL': { name: 'Apple Inc.', price: 238.45, change: 3.2, changePercent: 1.36, positive: true, chartData: [220, 225, 223, 230, 238.45] },
+            'GOOGL': { name: 'Alphabet Inc.', price: 2845.32, change: -38.00, changePercent: -1.4, positive: false, chartData: [2900, 2880, 2850, 2860, 2845.32] },
+            'TSLA': { name: 'Tesla Inc.', price: 780.00, change: 28.00, changePercent: 4.1, positive: true, chartData: [740, 750, 765, 755, 780] },
+            'MSFT': { name: 'Microsoft Corp.', price: 412.89, change: 2.8, changePercent: 2.8, positive: true, chartData: [405, 408, 407, 410, 412.89] },
+            'AMZN': { name: 'Amazon.com, Inc.', price: 156.78, change: -1.24, changePercent: -0.78, positive: false, chartData: [160, 158, 159, 157, 156.78] },
+            'NVDA': { name: 'NVIDIA Corp.', price: 875.43, change: 12.33, changePercent: 1.42, positive: true, chartData: [850, 860, 855, 865, 875.43] },
+        };
 
-        function showPage(pageId) {
+        const mockUserPortfolio = {
+            daily: { value: 156842.50, change: 3764.22, changePercent: 2.4, positive: true, chartData: [152000, 153000, 152500, 154000, 155500, 156842.50] },
+            weekly: { value: 156842.50, change: 9724.25, changePercent: 6.2, positive: true, chartData: [147000, 149000, 152500, 151000, 154000, 156842.50] },
+            monthly: { value: 156842.50, change: -22758.16, changePercent: -14.5, positive: false, chartData: [179000, 172000, 162500, 168000, 154000, 156842.50] },
+            assets: [
+                { ticker: 'AAPL', shares: 250, value: 45000, changePercent: 3.2 },
+                { ticker: 'GOOGL', shares: 120, value: 38000, changePercent: -1.4 },
+                { ticker: 'TSLA', shares: 180, value: 28000, changePercent: 4.1 },
+                { ticker: 'MSFT', shares: 300, value: 45842.5, changePercent: 2.8 },
+            ]
+        };
+        const mockWatchlist = ['AAPL', 'AMZN', 'GOOGL', 'MSFT', 'NVDA'];
+        const mockNewsData = [
+            { id: 1, category: 'Trending', ticker: 'AAPL', timestamp: '3 hours ago', headline: 'Apple Reports Record Q4 Earnings, Beats Wall Street Expectations', summary: 'Apple Inc. exceeded analyst expectations with quarterly revenue of $90.5 billion, driven by strong iPhone 15 sales and services growth.', imageUrl: 'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=60' },
+            { id: 2, category: 'Market', timestamp: '4 hours ago', headline: 'Federal Reserve Signals Potential Rate Cut in December Meeting', summary: 'Fed Chair Jerome Powell hints at monetary policy shift as inflation shows signs of cooling across major economic indicators.', imageUrl: 'https://images.unsplash.com/photo-1600520635449-22214695029c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=60' },
+            { id: 3, category: 'Trending', ticker: 'TSLA', timestamp: '8 hours ago', headline: 'Tesla Stock Surges 8% on Autonomous Vehicle Breakthrough', summary: 'Shares soared after a breakthrough in Full Self-Driving technology, with regulatory approval expected in Q1 2025.', imageUrl: 'https://images.unsplash.com/photo-1617704548623-34047b423862?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=60' }
+        ];
+        const allPages = ['welcome-page', 'login-page', 'register-page', 'registration-success-page', 'reset-password-page', 'reset-code-page', 'new-password-page', 'home-page-wrapper', 'stock-detail-page', 'buy-page', 'sell-page', 'pro-page', 'subscription-page', 'etf-detail-page', 'portfolio-page', 'watchlist-page', 'profile-settings-page', 'news-page'];
+
+        function showPage(pageId, navItem) {
             allPages.forEach(id => {
                 const page = document.getElementById(id);
                 if (page) {
-                    // Modal-style pages need special handling
-                    if (id === 'buy-page' || id === 'sell-page') {
-                        if (id === pageId) {
-                            page.classList.remove('hidden');
-                            page.classList.add('flex');
-                        } else {
-                            page.classList.add('hidden');
-                            page.classList.remove('flex');
-                        }
-                    } else { // Full pages
-                         page.classList.add('hidden');
-                    }
+                    page.classList.add('hidden');
+                    if (page.classList.contains('flex')) page.classList.remove('flex');
                 }
             });
             const targetPage = document.getElementById(pageId);
-            if (targetPage && (pageId !== 'buy-page' && pageId !== 'sell-page')) {
+            if (targetPage) {
                 targetPage.classList.remove('hidden');
+                if (pageId === 'buy-page' || pageId === 'sell-page') targetPage.classList.add('flex');
             }
-             // If we are showing a page that needs initialization
-            if (pageId === 'home-page-wrapper') initializeDashboard();
+            if (targetPage && targetPage.classList.contains('page-with-nav')) {
+                initializeNavBars();
+                updateActiveNav(navItem);
+            }
+            switch(pageId) {
+                case 'home-page-wrapper': initializeDashboard(); break;
+                case 'portfolio-page': showPortfolioPage(); break;
+                case 'watchlist-page': showWatchlistPage(); break;
+                case 'profile-settings-page': showProfileSettingsPage(); break;
+                case 'news-page': showNewsPage(); break;
+                case 'subscription-page': injectPaymentMethods(); break;
+            }
+        }
+        
+        function initializeDashboard() {
+            const dash = mockDashboardData;
+            document.getElementById('home-username').innerText = mockUser.fullName;
+            const portfolio = dash.portfolio;
+            document.getElementById('home-portfolio-card').innerHTML = `<p class="text-sm text-gray-400">Portfolio Value</p><p class="text-2xl font-bold text-white my-1">$${portfolio.value.toLocaleString('en-US')}</p><p class="text-sm font-semibold ${portfolio.positive ? 'text-green-custom' : 'text-red-custom'}">${portfolio.positive ? '+' : ''}${portfolio.changePercent}% Today</p>`;
+            const trending = dash.trending;
+            document.getElementById('home-trending-card').innerHTML = `<p class="text-sm text-gray-400">Trending</p><p class="text-lg font-bold text-white my-1">${trending.name}</p><div class="flex justify-between items-center"><p class="text-sm font-semibold text-white">$${trending.price}</p><p class="text-sm font-semibold ${trending.positive ? 'text-green-custom' : 'text-red-custom'}">${trending.changePercent}%</p></div>`;
+            const indicesContainer = document.getElementById('market-indices-container');
+            indicesContainer.innerHTML = '';
+            dash.indices.forEach(index => {
+                const cardColor = index.positive ? 'bg-green-custom/20 border-green-custom' : 'bg-red-custom/20 border-red-custom';
+                const textColor = index.positive ? 'text-green-custom' : 'text-red-custom';
+                indicesContainer.innerHTML += `<div class="p-3 rounded-xl border ${cardColor}"><p class="font-bold text-white">${index.name}</p><div class="flex justify-between items-end"><p class="font-semibold ${textColor}">${index.value}</p><div class="w-16 h-8"><canvas id="${index.id}"></canvas></div></div></div>`;
+                setTimeout(() => createSparkline(document.getElementById(index.id), index.positive), 0);
+            });
+            const logosContainer = document.getElementById('stocks-logo-container');
+            logosContainer.innerHTML = '';
+            dash.stocks.forEach(stock => {
+                logosContainer.innerHTML += `<div class="bg-[#1e222d] p-4 rounded-xl flex items-center justify-center h-20"><img src="${stock.logoUrl}" alt="${stock.name} Logo" class="h-8 w-auto ${stock.name === 'Apple' || stock.name === 'Amazon' ? 'filter invert' : ''}"></div>`;
+            });
+        }
+        
+        function showPortfolioPage() {
+            updatePortfolioView('daily');
+            const container = document.getElementById('portfolio-assets-container');
+            container.innerHTML = '';
+            mockUserPortfolio.assets.forEach(asset => {
+                const isPositive = asset.changePercent >= 0;
+                container.innerHTML += `<div class="flex items-center justify-between bg-[#1e222d] p-3 rounded-lg"><div><p class="font-bold text-white">${asset.ticker}</p><p class="text-sm text-gray-400">${asset.shares} shares</p></div><div><p class="font-semibold text-white text-right">$${asset.value.toLocaleString()}</p><p class="text-sm ${isPositive ? 'text-green-custom' : 'text-red-custom'} text-right">${isPositive ? '+' : ''}${asset.changePercent}%</p></div></div>`;
+            });
+        }
+        
+        function showWatchlistPage() {
+            document.getElementById('watchlist-greeting').innerText = `Good morning, ${mockUser.fullName}`;
+            const container = document.getElementById('watchlist-container');
+            container.innerHTML = '';
+            mockWatchlist.forEach(ticker => {
+                 const stock = mockStockData[ticker];
+                 if(stock) {
+                     container.innerHTML += `<div class="flex items-center justify-between bg-[#1e222d] p-3 rounded-lg cursor-pointer" onclick="showStockDetail('${ticker}')"><div><p class="font-bold text-white">${ticker}</p><p class="text-sm text-gray-400">${stock.name}</p></div><div class="text-right"><p class="font-semibold text-white">$${stock.price.toFixed(2)}</p><p class="text-sm ${stock.positive ? 'text-green-custom' : 'text-red-custom'}">${stock.positive ? '+' : ''}${stock.change.toFixed(2)} (${stock.positive ? '+' : ''}${stock.changePercent}%)</p></div></div>`;
+                 }
+            });
+        }
+
+        function showProfileSettingsPage() {
+            document.getElementById('profile-initials').innerText = mockUser.initials;
+            document.getElementById('profile-fullname').innerText = mockUser.fullName;
+            document.getElementById('profile-email').innerText = mockUser.email;
+            document.getElementById('profile-phone').innerText = mockUser.phone;
+            document.getElementById('profile-bio').innerText = mockUser.bio;
+        }
+
+        function showNewsPage() {
+            const filterContainer = document.getElementById('news-filter-container');
+            if (!filterContainer.dataset.initialized) {
+                filterContainer.innerHTML = newsFilters.map(filter => `<button id="filter-btn-${filter}" onclick="filterNews('${filter}')" class="px-4 py-1.5 text-sm font-semibold rounded-lg whitespace-nowrap bg-[#1e222d] text-gray-300">${filter}</button>`).join('');
+                filterContainer.dataset.initialized = 'true';
+            }
+            filterNews(activeNewsFilter);
+        }
+
+        function filterNews(category) {
+            activeNewsFilter = category;
+            const articlesContainer = document.getElementById('news-articles-container');
+            articlesContainer.innerHTML = '';
+            newsFilters.forEach(filter => {
+                const btn = document.getElementById(`filter-btn-${filter}`);
+                btn.classList.remove('news-filter-active');
+                btn.classList.add('bg-[#1e222d]', 'text-gray-300');
+            });
+            const activeBtn = document.getElementById(`filter-btn-${category}`);
+            activeBtn.classList.add('news-filter-active');
+            activeBtn.classList.remove('bg-[#1e222d]', 'text-gray-300');
+            const articlesToRender = mockNewsData.filter(article => category === 'All News' || (category === 'Trending' && article.category === 'Trending') || article.ticker === category);
+            articlesToRender.forEach(article => {
+                articlesContainer.innerHTML += `<div class="bg-[#1e222d] rounded-xl overflow-hidden"><div class="p-4"><div class="flex items-center space-x-2 text-xs mb-2"><span class="px-2 py-0.5 font-bold rounded bg-green-custom">${article.ticker || article.category}</span><span class="text-gray-400">${article.timestamp}</span></div><h3 class="font-bold text-white mb-2">${article.headline}</h3><p class="text-sm text-gray-400 mb-3">${article.summary}</p><a href="#" class="text-sm font-semibold text-green-custom">Read more</a></div><img src="${article.imageUrl}" alt="${article.headline}" class="w-full h-40 object-cover"></div>`;
+            });
         }
 
         function showStockDetail(ticker) {
             currentStockTicker = ticker;
             const stock = mockStockData[ticker];
             if (!stock) return;
-
-            // Populate header
             document.getElementById('detail-stock-ticker-header').innerText = ticker;
-
-            // Populate main info
             document.getElementById('detail-stock-name').innerText = stock.name;
             document.getElementById('detail-stock-price').innerText = `$${stock.price.toFixed(2)}`;
-            
-            // Populate stats
-            document.getElementById('stat-open').innerText = `$${stock.stats.open.toFixed(2)}`;
-            document.getElementById('stat-high').innerText = `$${stock.stats.high.toFixed(2)}`;
-            document.getElementById('stat-low').innerText = `$${stock.stats.low.toFixed(2)}`;
-            document.getElementById('stat-volume').innerText = stock.stats.volume;
-            
-            // Update Buy/Sell button actions
             document.getElementById('detail-buy-btn').setAttribute('onclick', `showBuyPage('${ticker}')`);
             document.getElementById('detail-sell-btn').setAttribute('onclick', `showSellPage('${ticker}')`);
-
-            // Render chart
             createMainStockChart(document.getElementById('mainStockChart'), stock.chartData, stock.positive);
-            
             showPage('stock-detail-page');
         }
 
@@ -414,150 +575,114 @@
             showPage('sell-page');
         }
 
-        function initializeDashboard() {
-            const indicesContainer = document.getElementById('market-indices-container');
-            const stocksContainer = document.getElementById('stocks-container');
-            
-            if (indicesContainer.dataset.initialized) return; // Only initialize once
-
-            // --- Market Indices Population (Example) ---
-            const marketIndicesData = [
-                { symbol: 'Nasdaq', price: 14509.32, positive: true },
-                { symbol: 'S&P 500', price: 4500.75, positive: false },
-            ];
-            indicesContainer.innerHTML = ''; // Clear
-            marketIndicesData.forEach((index, i) => {
-                const changeColorClass = index.positive ? 'text-green-custom' : 'text-red-custom';
-                indicesContainer.innerHTML += `
-                    <div class="bg-[#1e222d] p-4 rounded-xl">
-                        <p class="font-bold text-white mb-1">${index.symbol}</p>
-                        <div class="flex justify-between items-end">
-                            <p class="text-xl font-semibold ${changeColorClass}">${index.price.toFixed(2)}</p>
-                            <div class="w-1/2 h-8"><canvas id="indexChart${i}"></canvas></div>
-                        </div>
-                    </div>`;
-            });
-            marketIndicesData.forEach((index, i) => createSparkline(document.getElementById(`indexChart${i}`), index.positive));
-            
-            // --- Stocks Population ---
-            stocksContainer.innerHTML = ''; // Clear
-            Object.keys(mockStockData).forEach(ticker => {
-                const stock = mockStockData[ticker];
-                const colorClass = stock.positive ? 'text-green-custom' : 'text-red-custom';
-                const sign = stock.positive ? '+' : '';
-                stocksContainer.innerHTML += `
-                <div class="bg-[#1e222d] p-4 rounded-xl flex items-center justify-between cursor-pointer hover:bg-gray-700" onclick="showStockDetail('${ticker}')">
-                    <div>
-                        <p class="font-bold text-white text-lg">${ticker}</p>
-                        <p class="text-sm text-gray-400">${stock.name}</p>
-                    </div>
-                    <div class="w-24 h-12">
-                        <canvas id="stock-sparkline-${ticker}"></canvas>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-semibold text-white">$${stock.price.toFixed(2)}</p>
-                        <p class="text-sm ${colorClass}">${sign}${stock.change.toFixed(2)} (${sign}${stock.changePercent}%)</p>
-                    </div>
-                </div>
-                `;
-            });
-            Object.keys(mockStockData).forEach(ticker => createSparkline(document.getElementById(`stock-sparkline-${ticker}`), mockStockData[ticker].positive));
-
-
-            indicesContainer.dataset.initialized = 'true';
+        function toggleProPlan() {
+            const isYearly = document.getElementById('plan-toggle').checked;
+            const priceDisplay = document.getElementById('price-display');
+            if (isYearly) {
+                priceDisplay.innerHTML = `<p class="text-5xl font-bold text-white">$119</p><p class="text-gray-400">per year</p>`;
+                document.getElementById('monthly-label').classList.replace('text-white', 'text-gray-400');
+                document.getElementById('yearly-label').classList.replace('text-gray-400', 'text-white');
+            } else {
+                priceDisplay.innerHTML = `<p class="text-5xl font-bold text-white">$12</p><p class="text-gray-400">per month</p>`;
+                document.getElementById('yearly-label').classList.replace('text-white', 'text-gray-400');
+                document.getElementById('monthly-label').classList.replace('text-gray-400', 'text-white');
+            }
+        }
+        
+        function injectPaymentMethods() {
+            const container = document.getElementById('payment-methods-list');
+            if (container.dataset.initialized) return;
+            container.innerHTML = `<div class="bg-[#2a303b] p-4 rounded-lg flex items-center justify-between">...</div>`;
+            container.dataset.initialized = 'true';
         }
 
+        function updatePortfolioView(timespan) {
+            const data = mockUserPortfolio[timespan];
+            ['daily', 'weekly', 'monthly'].forEach(ts => {
+                const btn = document.getElementById(`portfolio-btn-${ts}`);
+                btn.classList.remove('bg-green-custom', 'bg-red-custom', 'text-white');
+                btn.classList.add('text-gray-400');
+            });
+            const activeBtn = document.getElementById(`portfolio-btn-${timespan}`);
+            activeBtn.classList.remove('text-gray-400');
+            activeBtn.classList.add(data.positive ? 'bg-green-custom' : 'bg-red-custom', 'text-white');
+            document.getElementById('portfolio-total-value').innerText = `$${data.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const changeEl = document.getElementById('portfolio-change');
+            const periodText = timespan.charAt(0).toUpperCase() + timespan.slice(1);
+            changeEl.innerText = `${data.positive ? '+' : ''}${data.changePercent}% This ${periodText === 'Daily' ? 'Today' : periodText}`;
+            changeEl.className = `font-semibold ${data.positive ? 'text-green-custom' : 'text-red-custom'}`;
+            createPortfolioChart(data.chartData, data.positive);
+        }
+        
+        function createPortfolioChart(data, isPositive) {
+            const canvasEl = document.getElementById('portfolioChart');
+            if (!canvasEl) return;
+            if (portfolioChartInstance) portfolioChartInstance.destroy();
+            const ctx = canvasEl.getContext('2d');
+            const borderColor = isPositive ? '#26A69A' : '#EF5350';
+            portfolioChartInstance = new Chart(ctx, {
+                type: 'line', data: { labels: data.map((_, i) => i), datasets: [{ data: data, borderColor: borderColor, borderWidth: 2, pointRadius: 0, tension: 0.4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+            });
+        }
+        
         function createSparkline(canvasEl, isPositive) {
             if (!canvasEl) return;
             const ctx = canvasEl.getContext('2d');
-            const data = Array.from({length: 10}, () => Math.random() * 100);
+            const data = Array.from({length: 10}, () => Math.random() * 20);
             const borderColor = isPositive ? '#26A69A' : '#EF5350';
-            
             new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.map((_, i) => i),
-                    datasets: [{
-                        data: data,
-                        borderColor: borderColor,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    scales: { x: { display: false }, y: { display: false } }
-                }
+                type: 'line', data: { labels: data.map((_, i) => i), datasets: [{ data: data, borderColor: borderColor, borderWidth: 2.5, pointRadius: 0, tension: 0.4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
             });
         }
-        
+
         function createMainStockChart(canvasEl, data, isPositive) {
              if (!canvasEl) return;
-             if(mainChartInstance) {
-                mainChartInstance.destroy();
-             }
-
+             if(mainChartInstance) mainChartInstance.destroy();
              const ctx = canvasEl.getContext('2d');
              const borderColor = isPositive ? '#26A69A' : '#EF5350';
              const gradient = ctx.createLinearGradient(0, 0, 0, canvasEl.offsetHeight);
-             const gradientStartColor = isPositive ? 'rgba(38, 166, 154, 0.4)' : 'rgba(239, 83, 80, 0.4)';
-             const gradientEndColor = 'rgba(19, 23, 34, 0)'; // Fades to background color
-             gradient.addColorStop(0, gradientStartColor);
-             gradient.addColorStop(1, gradientEndColor);
-
+             gradient.addColorStop(0, isPositive ? 'rgba(38, 166, 154, 0.4)' : 'rgba(239, 83, 80, 0.4)');
+             gradient.addColorStop(1, 'rgba(19, 23, 34, 0)');
              mainChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.map((_, i) => i), // Replace with actual time labels
-                    datasets: [{
-                        label: 'Price',
-                        data: data,
-                        borderColor: borderColor,
-                        borderWidth: 3,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: true,
-                        backgroundColor: gradient,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: { 
-                            mode: 'index',
-                            intersect: false,
-                            displayColors: false,
-                            callbacks: {
-                                label: (context) => `$${context.parsed.y.toFixed(2)}`
-                            }
-                         }
-                    },
-                    scales: { 
-                        x: { display: false }, 
-                        y: { display: false } 
-                    }
+                type: 'line', data: { labels: data.map((_, i) => i), datasets: [{ label: 'Price', data: data, borderColor: borderColor, borderWidth: 3, pointRadius: 0, tension: 0.4, fill: true, backgroundColor: gradient }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, displayColors: false, callbacks: { label: (context) => `$${context.parsed.y.toFixed(2)}` } } }, scales: { x: { display: false }, y: { display: false } } }
+            });
+        }
+
+        function updateActiveNav(activeItem) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('nav-item-active');
+                item.querySelector('svg')?.classList.remove('text-green-custom');
+                item.querySelector('span')?.classList.remove('text-green-custom');
+            });
+            if (activeItem) {
+                const element = document.getElementById(activeItem);
+                if (element) {
+                    element.classList.add('nav-item-active');
+                    element.querySelector('svg')?.classList.add('text-green-custom');
+                    element.querySelector('span')?.classList.add('text-green-custom');
+                }
+            }
+        }
+        function initializeNavBars() {
+            const navBarHTML = `
+                <a id="nav-portfolio" href="#" onclick="showPage('portfolio-page', 'nav-portfolio')" class="nav-item flex flex-col items-center justify-center p-2 text-center text-gray-400 hover:text-white rounded-lg"><svg fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 3V9M3 12V9"></path></svg><span class="text-xs mt-1">Portfolio</span></a>
+                <a id="nav-watchlist" href="#" onclick="showPage('watchlist-page', 'nav-watchlist')" class="nav-item flex flex-col items-center justify-center p-2 text-center text-gray-400 hover:text-white rounded-lg"><svg fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path></svg><span class="text-xs mt-1">Watch list</span></a>
+                <a id="nav-markets" href="#" onclick="showPage('home-page-wrapper', 'nav-markets')" class="nav-item flex flex-col items-center justify-center p-2 text-center text-gray-400 hover:text-white rounded-lg"><svg fill="currentColor" class="h-6 w-6" viewBox="0 0 24 24"><path d="M4 4.75A.75.75 0 014.75 4h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 014 4.75zM4 12a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H4.75A.75.75 0 014 12zm7-7.25a.75.75 0 000 1.5h8.5a.75.75 0 000-1.5h-8.5zM4 19.25A.75.75 0 014.75 18h4.5a.75.75 0 010 1.5h-4.5A.75.75 0 014 19.25zm7-7.25a.75.75 0 000 1.5h8.5a.75.75 0 000-1.5h-8.5zM11 18a.75.75 0 01.75.75h8.5a.75.75 0 010-1.5h-8.5a.75.75 0 01-.75.75z"></path></svg><span class="text-xs mt-1">Markets</span></a>
+                <a id="nav-news" href="#" onclick="showPage('news-page', 'nav-news')" class="nav-item flex flex-col items-center justify-center p-2 text-center text-gray-400 hover:text-white rounded-lg"><svg fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z"></path></svg><span class="text-xs mt-1">News</span></a>
+                <a id="nav-profile" href="#" onclick="showPage('profile-settings-page', 'nav-profile')" class="nav-item flex flex-col items-center justify-center p-2 text-center text-gray-400 hover:text-white rounded-lg"><svg fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"></path></svg><span class="text-xs mt-1">Profile</span></a>
+            `;
+            document.querySelectorAll('.fixed-nav-bar').forEach(el => {
+                if (!el.innerHTML) {
+                    el.className = 'fixed bottom-0 left-0 right-0 bg-[#1e222d] border-t border-gray-700 flex justify-around p-1 z-50';
+                    el.innerHTML = navBarHTML;
                 }
             });
         }
         
-        // --- Initial Load ---
-        document.addEventListener('DOMContentLoaded', () => {
-             // To preserve the content of unchanged pages, let's just copy it back in.
-             // (In a real app, this would be part of the template)
-             document.getElementById('register-page').innerHTML = `<div class="w-full max-w-sm"><h2 class="text-3xl font-bold text-center text-white mb-6">Registration</h2><form onsubmit="event.preventDefault(); showPage('registration-success-page');"><div class="mb-4"><input type="text" placeholder="Full Name" class="form-input" required></div><div class="mb-4"><input type="tel" placeholder="Phone Number" class="form-input" required></div><div class="mb-4"><input type="email" placeholder="Email Address" class="form-input" required></div><div class="mb-6"><input type="password" placeholder="Password" class="form-input" required></div><button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg w-full mb-4">Register</button></form><div class="text-center text-gray-500 mb-4">or Register with</div><div class="flex space-x-4"><button class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg flex items-center justify-center w-full"><svg class="h-6 w-6 mr-2" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"></path><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"></path></svg>Google</button></div><p class="text-center mt-6"><a href="#" onclick="showPage('login-page')" class="text-green-500 hover:text-green-400">Already have an account? Log in</a></p></div>`;
-             document.getElementById('registration-success-page').innerHTML = `<div class="bg-[#1e222d] p-10 rounded-xl max-w-sm w-full"><div class="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6"><svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div><h2 class="text-2xl font-bold text-white mb-4">Registration successful</h2><button onclick="showPage('login-page')" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg w-full">Log in &rarr;</button></div>`;
-             document.getElementById('reset-password-page').innerHTML = `<div class="w-full max-w-sm"><h2 class="text-3xl font-bold text-center text-white mb-6">Password reset</h2><form onsubmit="event.preventDefault(); showPage('reset-code-page');"><div class="mb-4"><input type="text" placeholder="Full Name" class="form-input"></div><div class="mb-4"><input type="tel" placeholder="Phone Number" class="form-input"></div><div class="mb-6"><input type="email" placeholder="Email Address" class="form-input" required></div><button type="button" onclick="showPage('reset-code-page')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg w-full mb-3">Send code via phone number</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg w-full">Send code via email</button></form><p class="text-center mt-6"><a href="#" onclick="showPage('login-page')" class="text-green-500 hover:text-green-400">&larr; Back to Login</a></p></div>`;
-             document.getElementById('reset-code-page').innerHTML = `<div class="w-full max-w-sm"><h2 class="text-3xl font-bold text-center text-white mb-6">Password reset</h2><form onsubmit="event.preventDefault(); showPage('new-password-page');"><div class="mb-4"><input type="text" placeholder="Enter code" class="form-input" required></div><button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg w-full mb-4">Confirm</button></form><p class="text-center text-gray-400">Resend code - 20s</p><p class="text-center mt-6"><a href="#" onclick="showPage('reset-password-page')" class="text-green-500 hover:text-green-400">&larr; Change email/phone</a></p></div>`;
-             document.getElementById('new-password-page').innerHTML = `<div class="w-full max-w-sm"><h2 class="text-3xl font-bold text-center text-white mb-6">Password reset</h2><form onsubmit="event.preventDefault(); showPage('login-page');"><div class="mb-4"><input type="password" placeholder="New Password" class="form-input" required></div><div class="mb-6"><input type="password" placeholder="Repeat password" class="form-input" required></div><button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg w-full">Confirm</button></form></div>`;
-             
-             // Start with the welcome page
-             showPage('welcome-page');
-        });
+        document.addEventListener('DOMContentLoaded', () => { showPage('welcome-page'); });
     </script>
 </body>
 </html>
