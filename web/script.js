@@ -1,5 +1,4 @@
 // --- CONFIG & STATE ---
-// !!! IMPORTANT: REPLACE WITH YOUR FINNHUB API KEY
 const FINNHUB_API_KEY = 'd1f7lvhr01qsg7davdsgd1f7lvhr01qsg7davdt0';
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 
@@ -14,7 +13,8 @@ let state = {
             { ticker: 'TSLA', shares: 180 },
             { ticker: 'MSFT', shares: 300 }
         ],
-        wishlist: ['NVDA', 'AMD']
+        wishlist: ['NVDA', 'AMD'],
+        isYearlyPlan: false,
     },
     currentStock: null,
     currency: 'USD',
@@ -778,6 +778,30 @@ function getUserLocation() {
     } else { container.textContent = "Geolocation is not supported by this browser."; }
 }
 
+function showPaymentPage() {
+    const isYearly = document.getElementById('plan-toggle').checked;
+    state.user.isYearlyPlan = isYearly;
+
+    const monthlyPlan = document.getElementById('payment-monthly-plan');
+    const yearlyPlan = document.getElementById('payment-yearly-plan');
+    const buyNowBtn = document.getElementById('buy-now-btn');
+
+    if (isYearly) {
+        monthlyPlan.classList.add('d-none');
+        yearlyPlan.classList.remove('d-none');
+        buyNowBtn.classList.remove('btn-brand-green');
+        buyNowBtn.classList.add('btn-warning');
+
+    } else {
+        monthlyPlan.classList.remove('d-none');
+        yearlyPlan.classList.add('d-none');
+        buyNowBtn.classList.add('btn-brand-green');
+        buyNowBtn.classList.remove('btn-warning');
+    }
+    navigateToPage('payment-page');
+}
+
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
@@ -794,12 +818,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('back-to-dashboard-btn').addEventListener('click', () => window.history.back());
     document.getElementById('back-to-profile-btn').addEventListener('click', () => window.history.back());
+    document.getElementById('back-to-pro-btn').addEventListener('click', () => navigateToPage('pro-page'));
 
     document.getElementById('plan-toggle').addEventListener('change', (e) => {
         const isYearly = e.currentTarget.checked;
         document.getElementById('monthly-plan').classList.toggle('d-none', isYearly);
         document.getElementById('yearly-plan').classList.toggle('d-none', !isYearly);
     });
+
+    document.getElementById('upgrade-now-btn').addEventListener('click', showPaymentPage);
 
     document.getElementById('search-input').addEventListener('input', handleSearch);
 
