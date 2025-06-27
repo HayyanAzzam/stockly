@@ -70,6 +70,8 @@ body {
 }
 .text-brand-green { color: #22c55e !important; }
 .text-brand-red { color: #ef4444 !important; }
+.text-brand-amber { color: #f59e0b !important; }
+
 
 .bg-brand-green-light { background-color: rgba(34, 197, 94, 0.1); }
 .bg-brand-red-light { background-color: rgba(239, 68, 68, 0.1); }
@@ -98,6 +100,12 @@ body {
 .chart-container-large {
     height: 256px;
 }
+
+#portfolio-chart-container {
+    height: 250px;
+    margin-bottom: 1rem;
+}
+
 
 /* --- Stock Logo Cards --- */
 .stock-logo-card {

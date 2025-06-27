@@ -190,7 +190,40 @@
                                 </div>
                             </div>
                         </main>
-                        <main id="portfolio-content" class="main-content-area"></main>
+                        
+                        <!-- UPDATED PORTFOLIO PAGE -->
+                        <main id="portfolio-content" class="main-content-area">
+                            <h2 class="h3 fw-bold mb-4">Portfolio</h2>
+                            <div class="card bg-body-tertiary border-0 p-4 rounded-4 shadow-sm mb-4">
+                                <p class="text-secondary mb-0">Portfolio Value</p>
+                                <div class="d-flex justify-content-between align-items-start">
+                                     <div>
+                                        <p id="portfolio-total-value" class="display-5 fw-bold mb-0">--</p>
+                                        <p id="portfolio-change-summary" class="h5 fw-semibold text-secondary">Loading...</p>
+                                    </div>
+                                    <div id="portfolio-trend-icon" class="fs-1 text-secondary">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="portfolio-range-selector" class="btn-group w-100 mb-3" role="group">
+                                <button type="button" class="btn btn-outline-secondary" data-range="Daily">Daily</button>
+                                <button type="button" class="btn btn-outline-secondary" data-range="Weekly">Weekly</button>
+                                <button type="button" class="btn btn-outline-secondary" data-range="Monthly">Monthly</button>
+                                <button type="button" class="btn btn-outline-secondary" data-range="Yearly">Yearly</button>
+                            </div>
+
+                            <div id="portfolio-chart-container" class="chart-container-large mb-4">
+                                <canvas id="portfolioChart"></canvas>
+                            </div>
+
+                            <h3 class="h5 fw-bold mb-3">Your Assets</h3>
+                            <div id="portfolio-assets-list" class="list-group">
+                                 <div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>
+                            </div>
+                        </main>
+                        
                         <main id="wishlist-content" class="main-content-area"></main>
                         <main id="news-content" class="main-content-area"></main>
                         <main id="profile-edit-content" class="main-content-area"></main>
