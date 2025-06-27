@@ -1,18 +1,18 @@
 // --- CONFIG & STATE ---
-const FINNHUB_API_KEY = 'd1f7lvhr01qsg7davdsgd1f7lvhr01qsg7davdt0';
+const FINNHUB_API_KEY = 'd1f7lvhr01qsg7davdsgd1f7lvhr01qsg7davdt0'; // Replace with your key if needed
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 
 let state = {
     user: {
         fullName: 'Fadi Abbara',
         email: 'demo@stockly.com',
+        cash: 100000, // Starting cash for trading
         portfolio: [
-            { ticker: 'AAPL', shares: 250 },
-            { ticker: 'GOOGL', shares: 120 },
-            { ticker: 'TSLA', shares: 180 },
-            { ticker: 'MSFT', shares: 300 }
+            { ticker: 'AAPL', shares: 50 },
+            { ticker: 'GOOGL', shares: 25 },
+            { ticker: 'TSLA', shares: 80 },
         ],
-        wishlist: ['NVDA', 'AMD'],
+        wishlist: ['NVDA', 'AMD', 'MSFT'],
         isYearlyPlan: false,
     },
     currentStock: null,
@@ -23,6 +23,7 @@ let state = {
         portfolio: null
     },
     searchModal: null,
+    tradeModal: null, // Bootstrap modal instance for trading
 };
 
 // --- API FUNCTIONS ---
@@ -30,6 +31,8 @@ async function apiRequest(endpoint, base = FINNHUB_BASE_URL, token = `&token=${F
     try {
         const response = await fetch(`${base}${endpoint}${token}`);
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`API request failed with status ${response.status}: ${errorText}`);
             throw new Error(`API request failed: ${response.statusText}`);
         }
         return await response.json();
@@ -44,7 +47,7 @@ async function getProfile(ticker) { return apiRequest(`/stock/profile2?symbol=${
 async function getGeneralNews() { return apiRequest(`/news?category=general`); }
 async function getCompanyNews(ticker) {
     const to = new Date().toISOString().split('T')[0];
-    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 30 days ago
+    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     return apiRequest(`/company-news?symbol=${ticker}&from=${from}&to=${to}`);
 }
 async function searchSymbols(query) { return apiRequest(`/search?q=${query}`); }
@@ -59,17 +62,17 @@ async function getExchangeRates() {
 }
 async function getCityFromCoords(lat, lon) {
     const endpoint = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
-    return apiRequest(endpoint, '', ''); // No base URL or token needed
+    return apiRequest(endpoint, '', '');
 }
 
 // --- UTILITY & FORMATTING FUNCTIONS ---
-function formatCurrency(value) {
+function formatCurrency(value, currency = state.currency) {
     if (typeof value !== 'number') return '$--.--';
-    const rate = state.exchangeRates[state.currency] || 1;
+    const rate = state.exchangeRates[currency] || 1;
     const convertedValue = value * rate;
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: state.currency,
+        currency: currency,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }).format(convertedValue);
@@ -138,17 +141,19 @@ async function renderHomePageSummary() {
     let totalValue = 0;
     let openingTotalValue = 0;
 
-    const portfolioQuotes = await Promise.all(state.user.portfolio.map(async (holding) => {
-        const quote = await getQuote(holding.ticker);
-        return { ...quote, shares: holding.shares };
-    }));
-    
-    portfolioQuotes.forEach(quote => {
-        if(quote && quote.c) {
-            totalValue += quote.c * quote.shares;
-            openingTotalValue += quote.o * quote.shares;
-        }
-    });
+    if (state.user.portfolio.length > 0) {
+        const portfolioQuotes = await Promise.all(state.user.portfolio.map(async (holding) => {
+            const quote = await getQuote(holding.ticker);
+            return { ...quote, shares: holding.shares };
+        }));
+        
+        portfolioQuotes.forEach(quote => {
+            if(quote && quote.c) {
+                totalValue += quote.c * quote.shares;
+                openingTotalValue += quote.o * quote.shares;
+            }
+        });
+    }
 
     const totalChangeValue = totalValue - openingTotalValue;
     const percentageChange = openingTotalValue ? (totalChangeValue / openingTotalValue) * 100 : 0;
@@ -157,15 +162,7 @@ async function renderHomePageSummary() {
     const portfolioChangeEl = document.getElementById('summary-portfolio-change');
     portfolioChangeEl.innerText = `${totalChangeValue >= 0 ? '+' : ''}${formatPercentage(percentageChange)} Today`;
     portfolioChangeEl.className = `fw-semibold mb-0 small ${getChangeClass(totalChangeValue)}`;
-
-    const trendingTicker = 'AAPL';
-    const quote = await getQuote(trendingTicker);
-    if(quote) {
-        document.getElementById('summary-trending-stock').innerText = formatCurrency(quote.c);
-        const trendingChangeEl = document.getElementById('summary-trending-change');
-        trendingChangeEl.innerText = formatPercentage(quote.dp);
-        trendingChangeEl.className = `fw-semibold mb-0 small ${getChangeClass(quote.dp)}`;
-    }
+    document.getElementById('summary-available-cash').innerText = formatCurrency(state.user.cash);
 }
 
 async function renderMarketsPage() {
@@ -205,11 +202,7 @@ async function renderMarketsPage() {
     container.innerHTML = content || '<p class="col-12 text-secondary">Could not load market indices.</p>';
 }
 
-// --- UPDATED PORTFOLIO PAGE FUNCTIONS ---
-
-/**
- * Main function to orchestrate the portfolio page rendering.
- */
+// --- PORTFOLIO PAGE ---
 async function renderPortfolioPage() {
     const oldSelector = document.getElementById('portfolio-range-selector');
     if (oldSelector) {
@@ -224,40 +217,33 @@ async function renderPortfolioPage() {
         });
     });
 
-    renderPortfolioAssets(); 
-    // Default to weekly view or whatever the active button is
+    document.getElementById('portfolio-available-cash').innerText = formatCurrency(state.user.cash);
+    await renderPortfolioAssets(); 
     const activeRange = document.querySelector('#portfolio-range-selector button.active')?.dataset.range || 'Weekly';
     updatePortfolioView(activeRange);
 }
 
-/**
- * Renders the "Your Assets" list.
- */
 async function renderPortfolioAssets() {
     const assetsListContainer = document.getElementById('portfolio-assets-list');
-    const portfolioTotalValueEl = document.getElementById('portfolio-total-value');
     
-    if (!assetsListContainer || !portfolioTotalValueEl) return;
+    if (!assetsListContainer) return;
 
     if (state.user.portfolio.length === 0) {
         assetsListContainer.innerHTML = `<p class="text-secondary text-center p-4">Your portfolio is empty.</p>`;
-        portfolioTotalValueEl.innerText = formatCurrency(0);
         return;
     }
-
-    let totalCurrentValue = 0;
     
     const assetPromises = state.user.portfolio.map(async holding => {
-        const [profile, quote] = await Promise.all([getProfile(holding.ticker), getQuote(holding.ticker)]);
+        const quote = await getQuote(holding.ticker);
+        const profile = await getProfile(holding.ticker);
         const value = (quote.c || 0) * holding.shares;
-        totalCurrentValue += value;
         return { ...profile, ...quote, value, shares: holding.shares, symbol: holding.ticker };
     });
 
     const assets = await Promise.all(assetPromises);
     
     let assetsContent = '';
-    assets.forEach(asset => {
+    assets.sort((a, b) => b.value - a.value).forEach(asset => {
         assetsContent += `
             <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="event.preventDefault(); showStockDetail('${asset.symbol}')">
                 <div class="d-flex align-items-center">
@@ -275,32 +261,32 @@ async function renderPortfolioAssets() {
     });
     
     assetsListContainer.innerHTML = assetsContent;
-    portfolioTotalValueEl.innerText = formatCurrency(totalCurrentValue);
 }
 
-/**
- * [CHART FIX] Fetches historical data and updates the chart and summary.
- * This function contains the new, more robust data aggregation logic.
- * @param {string} range - The time range ('Daily', 'Weekly', 'Monthly', 'Yearly').
- */
 async function updatePortfolioView(range) {
     document.querySelectorAll('#portfolio-range-selector button').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.range === range);
     });
     
     const chartContainer = document.getElementById('portfolio-chart-container');
+    const totalValueEl = document.getElementById('portfolio-total-value');
+    const changeSummaryEl = document.getElementById('portfolio-change-summary');
+    const trendIconEl = document.getElementById('portfolio-trend-icon');
+
     chartContainer.innerHTML = `<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
-    
+    totalValueEl.innerText = '--';
+    changeSummaryEl.innerText = 'Loading...';
+
     if (state.user.portfolio.length === 0) {
         chartContainer.innerHTML = `<p class="text-secondary text-center h-100 d-flex align-items-center justify-content-center">Add assets to see your portfolio chart.</p>`;
-        document.getElementById('portfolio-change-summary').innerText = "No assets";
-        document.getElementById('portfolio-trend-icon').innerHTML = `<i class="bi bi-pie-chart"></i>`;
+        totalValueEl.innerText = formatCurrency(0);
+        changeSummaryEl.innerText = "No assets";
+        trendIconEl.innerHTML = `<i class="bi bi-pie-chart"></i>`;
         return;
     }
 
     const now = Math.floor(Date.now() / 1000);
     let from, resolution, timeLabel;
-
     switch(range) {
         case 'Daily': from = now - (1 * 24 * 60 * 60); resolution = '15'; timeLabel = 'Today'; break;
         case 'Weekly': from = now - (7 * 24 * 60 * 60); resolution = '60'; timeLabel = 'This Week'; break;
@@ -317,8 +303,7 @@ async function updatePortfolioView(range) {
 
         const validCandles = allCandlesData.filter(c => c && c.s === 'ok' && c.c && c.c.length > 0);
         if (validCandles.length === 0) throw new Error("Could not fetch valid candle data for portfolio.");
-
-        // --- ROBUST AGGREGATION LOGIC ---
+        
         const stockDataMap = {};
         const allTimestamps = new Set();
         validCandles.forEach(stockData => {
@@ -331,8 +316,6 @@ async function updatePortfolioView(range) {
 
         const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
         const portfolioHistory = {};
-
-        // Track last known price for each stock to fill gaps
         const lastKnownPrices = {};
         state.user.portfolio.forEach(h => lastKnownPrices[h.ticker] = 0);
         
@@ -340,10 +323,10 @@ async function updatePortfolioView(range) {
             let totalValueAtTs = 0;
             state.user.portfolio.forEach(holding => {
                 const stockData = stockDataMap[holding.ticker];
-                let price = lastKnownPrices[holding.ticker]; // Start with the last known price
+                let price = lastKnownPrices[holding.ticker];
                 if (stockData && stockData[ts] !== undefined) {
-                    price = stockData[ts]; // Update if there's a price for the current timestamp
-                    lastKnownPrices[holding.ticker] = price; // And save it
+                    price = stockData[ts];
+                    lastKnownPrices[holding.ticker] = price;
                 }
                 totalValueAtTs += price * holding.shares;
             });
@@ -351,42 +334,35 @@ async function updatePortfolioView(range) {
         });
 
         const labels = sortedTimestamps.map(ts => new Date(ts * 1000));
-        const data = sortedTimestamps.map(ts => portfolioHistory[ts]).filter(v => v > 0); // Filter out initial zero values
-        if(data.length === 0) throw new Error("Could not compute portfolio history.");
+        const data = sortedTimestamps.map(ts => portfolioHistory[ts]).filter(v => v > 0);
+        if(data.length < 2) throw new Error("Not enough data to compute portfolio history.");
         
         const startValue = data[0];
         const endValue = data[data.length - 1];
         const changePercentage = startValue ? ((endValue - startValue) / startValue) * 100 : 0;
         
-        const changeSummaryEl = document.getElementById('portfolio-change-summary');
+        totalValueEl.innerText = formatCurrency(endValue + state.user.cash);
         changeSummaryEl.innerText = `${changePercentage >= 0 ? '+' : ''}${changePercentage.toFixed(1)}% ${timeLabel}`;
         changeSummaryEl.className = `h5 fw-semibold ${getChangeClass(changePercentage)}`;
 
-        const trendIconEl = document.getElementById('portfolio-trend-icon');
-        const isPositive = changePercentage >= 0;
         trendIconEl.className = `fs-1 ${getChangeClass(changePercentage)}`;
-        trendIconEl.innerHTML = `<i class="bi ${isPositive ? 'bi-graph-up' : 'bi-graph-down'}"></i>`;
+        trendIconEl.innerHTML = `<i class="bi ${changePercentage >= 0 ? 'bi-graph-up' : 'bi-graph-down'}"></i>`;
 
         chartContainer.innerHTML = `<canvas id="portfolioChart"></canvas>`;
-        createPortfolioChart(labels.slice(-data.length), data, range);
+        createPortfolioChart(labels.slice(-data.length), data);
 
     } catch (error) {
         console.error("Error updating portfolio view:", error);
+        totalValueEl.innerText = 'Error';
+        changeSummaryEl.innerText = 'Could not load data';
         chartContainer.innerHTML = `<p class="text-secondary text-center h-100 d-flex align-items-center justify-content-center">Could not load portfolio chart.</p>`;
     }
 }
 
-
-/**
- * Creates or updates the portfolio line chart using Chart.js.
- */
-function createPortfolioChart(labels, data, range) {
+function createPortfolioChart(labels, data) {
      const canvasEl = document.getElementById('portfolioChart');
      if (!canvasEl) return;
      if(state.chartInstances.portfolio) state.chartInstances.portfolio.destroy();
-
-     let borderColor = '#22c55e';
-     let gradientStartColor = 'rgba(34, 197, 94, 0.4)';
 
      const change = data[data.length - 1] - data[0];
      
@@ -407,6 +383,7 @@ function createPortfolioChart(labels, data, range) {
 }
 // --- END OF PORTFOLIO FUNCTIONS ---
 
+// --- OTHER RENDER FUNCTIONS ---
 async function renderNewsPage() {
     const container = document.getElementById('news-content');
     container.innerHTML = `<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
@@ -574,7 +551,6 @@ function renderProfileEditPage() {
         state.user.fullName = document.getElementById('fullName').value;
         state.user.email = document.getElementById('email').value;
         document.getElementById('dashboard-username').innerText = state.user.fullName;
-        // A real app should use a non-blocking notification instead of alert.
         showMainContent('profile-content');
     });
 }
@@ -595,14 +571,16 @@ async function showStockDetail(ticker) {
         return;
     }
 
-    // [WATCHLIST ADDITION] HTML now includes a container for the watchlist button.
+    const holding = state.user.portfolio.find(h => h.ticker === ticker);
+    const sharesOwned = holding ? holding.shares : 0;
+
     contentArea.innerHTML = `
         <header class="d-flex justify-content-between align-items-center mb-4">
             <button id="back-to-dashboard-btn-detail" class="btn btn-link p-2">
                 <i class="bi bi-arrow-left fs-4"></i>
             </button>
             <h1 class="h5 fw-bold text-body-emphasis mb-0">${profile.ticker || ticker}</h1>
-            <div style="width: 40px;"></div>
+            <div id="watchlist-action-container" class="text-end" style="width: 40px;"></div>
         </header>
         <div class="max-w-xl mx-auto w-100">
             <div class="mb-4">
@@ -620,11 +598,8 @@ async function showStockDetail(ticker) {
                 <button type="button" class="btn btn-outline-secondary active" data-range="1Y">1Y</button>
             </div>
             <div class="d-grid gap-3" style="grid-template-columns: 1fr 1fr;">
-                <button class="btn btn-brand-green btn-lg fw-bold">Buy</button>
-                <button class="btn btn-brand-red btn-lg fw-bold">Sell</button>
-            </div>
-            <div id="watchlist-action-container" class="mt-3 d-grid">
-                <!-- Watchlist button will be rendered here -->
+                <button class="btn btn-brand-green btn-lg fw-bold" onclick="openTradeModal('${ticker}', 'buy')">Buy</button>
+                <button class="btn btn-brand-red btn-lg fw-bold" onclick="openTradeModal('${ticker}', 'sell')" ${!sharesOwned ? 'disabled' : ''}>Sell</button>
             </div>
             <div id="stock-news-container" class="mt-5">
                 <h3 class="h4 fw-bold mb-3">Relevant News</h3>
@@ -644,7 +619,7 @@ async function showStockDetail(ticker) {
 
     updateStockChart('1Y');
     loadStockNews(ticker);
-    renderWatchlistButton(ticker); // [WATCHLIST ADDITION] Render the button
+    renderWatchlistButton(ticker);
 }
 
 async function loadStockNews(ticker) {
@@ -668,50 +643,33 @@ async function loadStockNews(ticker) {
     container.innerHTML = content + '</div>';
 }
 
-// --- NEW WATCHLIST FUNCTIONS ---
-/**
- * Toggles a stock's presence in the user's watchlist.
- * @param {string} ticker The stock ticker to add or remove.
- */
 function toggleWatchlist(ticker) {
     const watchlist = state.user.wishlist;
     const index = watchlist.indexOf(ticker);
     
     if (index > -1) {
-        watchlist.splice(index, 1); // Remove from watchlist
+        watchlist.splice(index, 1);
     } else {
-        watchlist.push(ticker); // Add to watchlist
+        watchlist.push(ticker);
     }
     
-    renderWatchlistButton(ticker); // Re-render the button to show the new state
+    renderWatchlistButton(ticker);
 }
 
-/**
- * Renders the "Add/Remove from Watchlist" button based on the current state.
- * @param {string} ticker The stock ticker to check for.
- */
 function renderWatchlistButton(ticker) {
     const container = document.getElementById('watchlist-action-container');
     if (!container) return;
     
     const isInWatchlist = state.user.wishlist.includes(ticker);
+    const btnClass = isInWatchlist ? 'text-brand-amber' : 'text-secondary';
+    const iconClass = isInWatchlist ? 'bi-star-fill' : 'bi-star';
     
-    if (isInWatchlist) {
-        container.innerHTML = `
-            <button class="btn btn-secondary btn-lg fw-bold d-flex align-items-center justify-content-center" onclick="toggleWatchlist('${ticker}')">
-                <i class="bi bi-star-fill me-2"></i> Added to Watchlist
-            </button>
-        `;
-    } else {
-        container.innerHTML = `
-            <button class="btn btn-outline-secondary btn-lg fw-bold d-flex align-items-center justify-content-center" onclick="toggleWatchlist('${ticker}')">
-                <i class="bi bi-star me-2"></i> Add to Watchlist
-            </button>
-        `;
-    }
+    container.innerHTML = `
+        <button class="btn btn-link p-2" onclick="toggleWatchlist('${ticker}')">
+            <i class="bi ${iconClass} fs-4 ${btnClass}"></i>
+        </button>
+    `;
 }
-// --- END OF WATCHLIST FUNCTIONS ---
-
 
 // --- CHARTING ---
 async function updateStockChart(range) {
@@ -761,13 +719,122 @@ function createMainStockChart(labels, data, isPositive) {
     });
 }
 
+// --- TRADE MODAL & LOGIC ---
+async function openTradeModal(ticker, action) {
+    const form = document.getElementById('trade-form');
+    form.reset();
+    form.classList.remove('was-validated');
+
+    const quote = await getQuote(ticker);
+    if (!quote || !quote.c) {
+        alert("Could not fetch current price. Please try again.");
+        return;
+    }
+
+    const currentPrice = quote.c;
+    const holding = state.user.portfolio.find(h => h.ticker === ticker);
+    const sharesOwned = holding ? holding.shares : 0;
+
+    const modalTitle = document.getElementById('tradeModalLabel');
+    const confirmBtn = document.getElementById('confirm-trade-btn');
+    modalTitle.textContent = `${action === 'buy' ? 'Buy' : 'Sell'} ${ticker}`;
+    confirmBtn.className = `btn ${action === 'buy' ? 'btn-brand-green' : 'btn-brand-red'}`;
+    confirmBtn.textContent = `Confirm ${action === 'buy' ? 'Purchase' : 'Sale'}`;
+
+    document.getElementById('trade-ticker').value = ticker;
+    document.getElementById('trade-action').value = action;
+    document.getElementById('trade-price').value = currentPrice;
+
+    document.getElementById('modal-current-price').textContent = formatCurrency(currentPrice);
+    document.getElementById('modal-shares-owned').textContent = `${sharesOwned} shares`;
+    document.getElementById('modal-available-cash').textContent = formatCurrency(state.user.cash);
+    document.getElementById('modal-estimated-total').textContent = formatCurrency(0);
+
+    state.tradeModal.show();
+}
+
+function updateEstimatedTotal() {
+    const sharesInput = document.getElementById('trade-shares');
+    const shares = parseFloat(sharesInput.value);
+    const price = parseFloat(document.getElementById('trade-price').value);
+
+    if (!isNaN(shares) && !isNaN(price) && shares > 0) {
+        const total = shares * price;
+        document.getElementById('modal-estimated-total').textContent = formatCurrency(total);
+    } else {
+        document.getElementById('modal-estimated-total').textContent = formatCurrency(0);
+    }
+}
+
+async function handleTrade(event) {
+    event.preventDefault();
+    const form = event.target;
+    
+    const ticker = form.querySelector('#trade-ticker').value;
+    const action = form.querySelector('#trade-action').value;
+    const shares = parseInt(form.querySelector('#trade-shares').value);
+    const price = parseFloat(form.querySelector('#trade-price').value);
+    
+    const sharesInput = document.getElementById('trade-shares');
+    const errorDiv = sharesInput.nextElementSibling;
+    sharesInput.classList.remove('is-invalid');
+
+    if (isNaN(shares) || shares <= 0) {
+        errorDiv.textContent = "Please enter a valid number of shares.";
+        sharesInput.classList.add('is-invalid');
+        return;
+    }
+    
+    if (action === 'buy') {
+        const cost = shares * price;
+        if (cost > state.user.cash) {
+            errorDiv.textContent = `Insufficient funds. You need ${formatCurrency(cost)} but only have ${formatCurrency(state.user.cash)}.`;
+            sharesInput.classList.add('is-invalid');
+            return;
+        }
+        
+        state.user.cash -= cost;
+        const existingHolding = state.user.portfolio.find(h => h.ticker === ticker);
+        if (existingHolding) {
+            existingHolding.shares += shares;
+        } else {
+            state.user.portfolio.push({ ticker, shares });
+        }
+
+    } else { // sell action
+        const existingHolding = state.user.portfolio.find(h => h.ticker === ticker);
+        if (!existingHolding || shares > existingHolding.shares) {
+            errorDiv.textContent = `You cannot sell more shares than you own (${existingHolding ? existingHolding.shares : 0}).`;
+            sharesInput.classList.add('is-invalid');
+            return;
+        }
+
+        const proceeds = shares * price;
+        state.user.cash += proceeds;
+        existingHolding.shares -= shares;
+
+        if (existingHolding.shares === 0) {
+            state.user.portfolio = state.user.portfolio.filter(h => h.ticker !== ticker);
+        }
+    }
+    
+    state.tradeModal.hide();
+    showStockDetail(ticker);
+    const activeContent = document.querySelector('.main-content-area[style*="block"]');
+    if (activeContent) {
+        showMainContent(activeContent.id);
+    } else {
+        renderHomePageSummary();
+    }
+}
+
+
 // --- EVENT HANDLERS & OTHER LOGIC ---
 function toggleTheme() {
     const isDark = document.documentElement.dataset.bsTheme === 'dark';
     document.documentElement.dataset.bsTheme = isDark ? 'light' : 'dark';
     localStorage.setItem('theme', document.documentElement.dataset.bsTheme);
     
-    // Redraw charts on theme change to adapt colors
     if(state.currentStock) {
         const activeRangeButton = document.querySelector('#time-range-selector .active');
         if (activeRangeButton) updateStockChart(activeRangeButton.dataset.range);
@@ -872,7 +939,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('register-page'); });
     document.getElementById('show-login-from-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('login-page'); });
     
-    // The back button on stock detail is created dynamically, so the listener is added there
     document.getElementById('back-to-profile-btn').addEventListener('click', () => window.history.back());
     document.getElementById('back-to-pro-btn').addEventListener('click', () => navigateToPage('pro-page'));
 
@@ -883,16 +949,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('upgrade-now-btn').addEventListener('click', showPaymentPage);
-
     document.getElementById('search-input').addEventListener('input', handleSearch);
+
+    document.getElementById('trade-form').addEventListener('submit', handleTrade);
+    document.getElementById('trade-shares').addEventListener('input', updateEstimatedTotal);
 
     // --- Theme Setup ---
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.dataset.bsTheme = savedTheme || (prefersDark ? 'dark' : 'light');
 
-    // --- Bootstrap Modal instance ---
+    // --- Bootstrap Modal instances ---
     state.searchModal = new bootstrap.Modal(document.getElementById('searchModal'));
+    state.tradeModal = new bootstrap.Modal(document.getElementById('tradeModal'));
     
     // --- Initial Page Load ---
     getExchangeRates();
@@ -900,7 +969,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('popstate', (event) => {
         const pageId = window.location.hash.substring(1);
-        if (pageId) {
+        if (pageId && document.getElementById(pageId)) {
            navigateToPage(pageId);
         } else {
            navigateToPage('welcome-page');
@@ -913,7 +982,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (initialPage === 'home-page') {
         const activeLink = document.querySelector('.nav-link.active');
         if (activeLink) {
-             showMainContent(activeLink.dataset.target);
+             showMainContent(activeLink.dataset.target || 'markets-content');
         } else {
              showMainContent('markets-content');
         }
