@@ -45,10 +45,10 @@
                     <p class="text-center text-secondary mb-5">Your gateway to what's investing.</p>
                     <form id="login-form">
                         <div class="mb-3">
-                            <input type="email" placeholder="Email address" class="form-control form-control-lg bg-body-tertiary border-2" required value="demo@stockly.com">
+                            <input type="email" id="login-email" placeholder="Email address" class="form-control form-control-lg bg-body-tertiary border-2" required>
                         </div>
                         <div class="mb-4">
-                            <input type="password" placeholder="Password" class="form-control form-control-lg bg-body-tertiary border-2" required value="password">
+                            <input type="password" id="login-password" placeholder="Password" class="form-control form-control-lg bg-body-tertiary border-2" required>
                         </div>
                         <button type="submit" class="btn btn-brand-green w-100 fw-semibold py-3">Login</button>
                     </form>
@@ -57,10 +57,10 @@
                 <div id="register-page" class="auth-sub-page d-none">
                    <p class="text-center text-secondary mb-5">Create Account</p>
                     <form id="register-form" class="gy-4">
-                        <input type="text" placeholder="Full Name" class="form-control form-control-lg bg-body-tertiary border-2" required>
-                        <input type="email" placeholder="Email address" class="form-control form-control-lg bg-body-tertiary border-2 mt-3" required>
-                        <input type="password" placeholder="Password" class="form-control form-control-lg bg-body-tertiary border-2 mt-3" required>
-                        <button type="submit" class.btn.btn-brand-green.w-100.fw-semibold.py-3.mt-4>Register</button>
+                        <input type="text" id="register-name" placeholder="Full Name" class="form-control form-control-lg bg-body-tertiary border-2" required>
+                        <input type="email" id="register-email" placeholder="Email address" class="form-control form-control-lg bg-body-tertiary border-2 mt-3" required>
+                        <input type="password" id="register-password" placeholder="Password" class="form-control form-control-lg bg-body-tertiary border-2 mt-3" required>
+                        <button type="submit" class="btn btn-brand-green w-100 fw-semibold py-3 mt-4">Register</button>
                     </form>
                      <p class="text-center small mt-4">Already have an account? <a href="#" id="show-login-from-register" class="fw-semibold text-brand-green">Login here</a></p>
                 </div>
@@ -76,10 +76,11 @@
                     <h1 class="h4 fw-bold ms-2 mb-0 text-body-emphasis">Stockly</h1>
                 </div>
                 <nav class="nav nav-pills flex-column">
-                    <a href="#" data-target="markets-content" class="nav-link d-flex align-items-center p-3"><i class="bi bi-graph-up-arrow me-3 fs-5"></i><span>Markets</span></a>
+                    <a href="#" data-target="markets-content" class="nav-link d-flex align-items-center p-3 active"><i class="bi bi-graph-up-arrow me-3 fs-5"></i><span>Markets</span></a>
                     <a href="#" data-target="portfolio-content" class="nav-link d-flex align-items-center p-3"><i class="bi bi-briefcase me-3 fs-5"></i><span>Portfolio</span></a>
                     <a href="#" data-target="wishlist-content" class="nav-link d-flex align-items-center p-3"><i class="bi bi-star me-3 fs-5"></i><span>Wishlist</span></a>
                     <a href="#" data-target="news-content" class="nav-link d-flex align-items-center p-3"><i class="bi bi-newspaper me-3 fs-5"></i><span>News</span></a>
+                    <a href="#" data-target="cart-content" class="nav-link d-flex align-items-center p-3"><i class="bi bi-cart me-3 fs-5"></i><span>Shopping Cart</span></a>
                     <a href="#" data-target="profile-edit-content" class="nav-link d-flex align-items-center p-3"><i class="bi bi-pencil-square me-3 fs-5"></i><span>Profile Edit</span></a>
                     <a href="#" data-target="profile-content" class="nav-link d-flex align-items-center p-3"><i class="bi bi-gear me-3 fs-5"></i><span>Settings</span></a>
                 </nav>
@@ -90,10 +91,10 @@
                 <header class="p-3 p-lg-4 flex-shrink-0 border-bottom">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center">
-                            <img class="user-avatar rounded-circle" src="https://placehold.co/100x100/E2E8F0/4A5568?text=FA" alt="User profile picture" onerror="this.onerror=null;this.src='https://placehold.co/100x100';">
+                            <img class="user-avatar rounded-circle" src="https://placehold.co/100x100/E2E8F0/4A5568?text=U" alt="User profile picture" onerror="this.onerror=null;this.src='https://placehold.co/100x100';">
                             <div class="ms-3">
                                 <p class="small text-secondary mb-0">Good morning</p>
-                                <h2 id="dashboard-username" class="h5 fw-bold text-body-emphasis mb-0"></h2>
+                                <h2 id="dashboard-username" class="h5 fw-bold text-body-emphasis mb-0">User</h2>
                             </div>
                         </div>
                         <div class="d-flex align-items-center">
@@ -222,6 +223,7 @@
                         
                         <main id="wishlist-content" class="main-content-area"></main>
                         <main id="news-content" class="main-content-area"></main>
+                        <main id="cart-content" class="main-content-area"></main>
                         <main id="profile-edit-content" class="main-content-area"></main>
                         <main id="profile-content" class="main-content-area"></main>
                     </div>
@@ -233,7 +235,8 @@
                 <div class="d-flex justify-content-around align-items-center h-mobile-nav">
                      <a href="#" data-target="portfolio-content" class="nav-link d-flex flex-column align-items-center p-2 rounded-3"><i class="bi bi-briefcase fs-5 mb-1"></i><span class="small-text">Portfolio</span></a>
                      <a href="#" data-target="wishlist-content" class="nav-link d-flex flex-column align-items-center p-2 rounded-3"><i class="bi bi-star fs-5 mb-1"></i><span class="small-text">Wishlist</span></a>
-                     <a href="#" data-target="markets-content" class="nav-link d-flex flex-column align-items-center p-2 rounded-3"><i class="bi bi-graph-up-arrow fs-5 mb-1"></i><span class="small-text">Markets</span></a>
+                      <a href="#" data-target="cart-content" class="nav-link d-flex flex-column align-items-center p-2 rounded-3"><i class="bi bi-cart fs-5 mb-1"></i><span class="small-text">Cart</span></a>
+                     <a href="#" data-target="markets-content" class="nav-link d-flex flex-column align-items-center p-2 rounded-3 active"><i class="bi bi-graph-up-arrow fs-5 mb-1"></i><span class="small-text">Markets</span></a>
                      <a href="#" data-target="news-content" class="nav-link d-flex flex-column align-items-center p-2 rounded-3"><i class="bi bi-newspaper fs-5 mb-1"></i><span class="small-text">News</span></a>
                      <a href="#" data-target="profile-content" class="nav-link d-flex flex-column align-items-center p-2 rounded-3"><i class="bi bi-person fs-5 mb-1"></i><span class="small-text">Profile</span></a>
                 </div>
@@ -390,6 +393,10 @@
                     <input type="number" id="trade-shares" class="form-control form-control-lg" required min="1" step="1">
                     <div class="invalid-feedback"></div>
                 </div>
+                
+                 <div class="mb-3">
+                    <button type="button" id="add-to-cart-btn" class="btn btn-outline-secondary w-100">Add to Cart</button>
+                </div>
 
                 <div class="p-3 bg-body-tertiary rounded-3">
                     <div class="d-flex justify-content-between"><span>Current Price:</span> <span id="modal-current-price">--</span></div>
@@ -409,11 +416,17 @@
     </div>
 
     <!-- Scripts -->
-    <!-- FIX: Removed the problematic date-fns script. The one below already includes it. -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script src="database.js"></script>
+    <script src="auth.js"></script>
+    <script src="shopping-cart.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

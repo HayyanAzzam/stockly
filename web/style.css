@@ -205,3 +205,24 @@ body {
 #trade-shares.is-invalid ~ .invalid-feedback {
     display: block;
 }
+
+/* Admin Page Styles */
+#admin-page {
+    padding: 2rem;
+}
+
+/* Shopping Cart Styles */
+#cart-content .cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+#cart-content .cart-item:last-child {
+    border-bottom: none;
+}
+#cart-total {
+    font-weight: bold;
+    font-size: 1.25rem;
+}

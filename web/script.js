@@ -1,30 +1,18 @@
 // --- CONFIG & STATE ---
-// Use 'var' to prevent "already declared" errors if the script is accidentally loaded twice.
-var FINNHUB_API_KEY = 'd1f7lvhr01qsg7davdsgd1f7lvhr01qsg7davdt0';
+var FINNHUB_API_KEY = 'd1g7v8hr01qk4ao1mng0d1g7v8hr01qk4ao1mngg'; // New API Key
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 
 let state = {
-    user: {
-        fullName: 'Fadi Abbara',
-        email: 'demo@stockly.com',
-        cash: 100000,
-        portfolio: [
-            { ticker: 'AAPL', shares: 50 },
-            { ticker: 'GOOGL', shares: 25 },
-            { ticker: 'TSLA', shares: 80 },
-        ],
-        wishlist: ['NVDA', 'AMD', 'MSFT'],
-        isYearlyPlan: false,
-    },
+    user: null, // User object will be populated from Firestore
     currentStock: null,
     currency: 'USD',
     exchangeRates: {},
     chartInstances: { main: null, portfolio: null },
     searchModal: null,
     tradeModal: null,
+    sessionId: null
 };
 
-// A flag to ensure the app initializes only once
 let isAppInitialized = false;
 
 // --- API FUNCTIONS ---
@@ -34,6 +22,11 @@ async function apiRequest(endpoint, base = FINNHUB_BASE_URL, token = `&token=${F
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`API request failed with status ${response.status}: ${errorText}`);
+            // Do not throw error for 429, handle gracefully
+            if (response.status === 429) {
+                 console.warn("API rate limit exceeded. Please try again later or upgrade your Finnhub plan.");
+                 return null;
+            }
             throw new Error(`API request failed: ${response.statusText}`);
         }
         const text = await response.text();
@@ -46,7 +39,7 @@ async function apiRequest(endpoint, base = FINNHUB_BASE_URL, token = `&token=${F
 
 async function getQuote(ticker) { return apiRequest(`/quote?symbol=${ticker}`); }
 async function getProfile(ticker) { return apiRequest(`/stock/profile2?symbol=${ticker}`); }
-async function getGeneralNews() { return apiRequest(`/news?category=general`); }
+async function getGeneralNews() { return apiRequest('/news?category=general'); }
 async function getCompanyNews(ticker) {
     const to = new Date().toISOString().split('T')[0];
     const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -64,6 +57,7 @@ async function getCityFromCoords(lat, lon) {
     const endpoint = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
     return apiRequest(endpoint, '', '');
 }
+
 
 // --- UTILITY & FORMATTING FUNCTIONS ---
 function getOnlineLogo(ticker) {
@@ -139,6 +133,12 @@ function showMainContent(targetId) {
     const targetElement = document.getElementById(targetId);
     if (targetElement) targetElement.style.display = 'block';
     document.querySelectorAll('.nav-link').forEach(link => link.classList.toggle('active', link.dataset.target === targetId));
+    
+    // De-duplicate active class on mobile nav
+    document.querySelectorAll('.d-lg-none .nav-link').forEach(link => link.classList.remove('active'));
+    const mobileLink = document.querySelector(`.d-lg-none .nav-link[data-target="${targetId}"]`);
+    if (mobileLink) mobileLink.classList.add('active');
+    
     switch (targetId) {
         case 'markets-content': renderHomePageSummary(); renderMarketsPage(); break;
         case 'portfolio-content': renderPortfolioPage(); break;
@@ -146,11 +146,15 @@ function showMainContent(targetId) {
         case 'profile-content': renderProfilePage(); break;
         case 'wishlist-content': renderWishlistPage(); break;
         case 'profile-edit-content': renderProfileEditPage(); break;
+        case 'cart-content': renderShoppingCartPage(); break;
     }
 }
 
-// --- RENDER FUNCTIONS ---
+
+// --- RENDER FUNCTIONS (DATABASE DRIVEN) ---
 async function renderHomePageSummary() {
+    if (!state.user) return;
+
     let totalValue = 0, openingTotalValue = 0;
     if (state.user.portfolio.length > 0) {
         const portfolioQuotes = await Promise.all(state.user.portfolio.map(h => getQuote(h.ticker)));
@@ -173,22 +177,22 @@ async function renderHomePageSummary() {
 async function renderMarketsPage() {
     const container = document.getElementById('market-indices-container');
     container.innerHTML = `<div class="text-center p-5 col-12"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
-    const tickers = ['^GSPC', '^IXIC', 'AAPL', 'BA'];
+    const tickers = ['^GSPC', '^IXIC', 'AAPL', 'BA', 'TSLA', 'META', 'JPM', 'V', 'DIS'];
     const promises = tickers.map(async (ticker) => {
         const [quote, profile] = await Promise.all([getQuote(ticker), getProfile(ticker.replace('^', ''))]);
         return { ...quote, ...profile, symbol: ticker };
     });
     const stocks = await Promise.all(promises);
     let content = stocks.map(stock => {
-        if (!stock.c || !stock.name) return '';
+        if (!stock || !stock.c || !stock.name) return '';
         const change = stock.d, isPositive = change >= 0;
         return `<div class="col-6 col-md-3"><a href="#" class="card-link" onclick="event.preventDefault(); showStockDetail('${stock.symbol}')"><div class="card h-100 p-3 rounded-4 border-0 shadow-sm ${getBGClass(change)}"><h4 class="h6 fw-bold text-body-emphasis">${stock.name}</h4><div class="d-flex justify-content-between align-items-center"><p class="h5 fw-bold mb-0 text-body-emphasis">${formatCurrency(stock.c)}</p><i class="bi ${isPositive ? 'bi-arrow-up-right' : 'bi-arrow-down-left'} fs-5"></i></div></div></a></div>`;
     }).join('');
-    container.innerHTML = content || '<p class="col-12 text-secondary">Could not load market indices.</p>';
+    container.innerHTML = content || '<p class="col-12 text-secondary">Could not load market indices due to API limits.</p>';
 }
 
-// --- PORTFOLIO PAGE ---
 async function renderPortfolioPage() {
+     if (!state.user) return;
     const oldSelector = document.getElementById('portfolio-range-selector');
     if (oldSelector) {
         const newSelector = oldSelector.cloneNode(true);
@@ -202,6 +206,7 @@ async function renderPortfolioPage() {
 }
 
 async function renderPortfolioAssets() {
+    if (!state.user) return;
     const assetsListContainer = document.getElementById('portfolio-assets-list');
     if (!assetsListContainer) return;
     if (state.user.portfolio.length === 0) {
@@ -213,7 +218,9 @@ async function renderPortfolioAssets() {
     assetsListContainer.innerHTML = assets.sort((a, b) => b.value - a.value).map(asset => `<a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="event.preventDefault(); showStockDetail('${asset.symbol}')"><div class="d-flex align-items-center"><img src="${getOnlineLogo(asset.symbol)}" class="asset-logo me-3 rounded-circle" alt="${asset.name}" onerror="this.src='https://placehold.co/40x40?text=${asset.symbol[0]}'"><div><span class="fw-bold">${asset.symbol}</span><small class="d-block text-secondary">${asset.shares} shares</small></div></div><div class="text-end"><p class="fw-bold mb-0">${formatCurrency(asset.value)}</p><small class="${getChangeClass(asset.d)}">${formatPercentage(asset.dp)}</small></div></a>`).join('');
 }
 
+
 async function updatePortfolioView(range) {
+    if (!state.user) return;
     document.querySelectorAll('#portfolio-range-selector button').forEach(btn => btn.classList.toggle('active', btn.dataset.range === range));
     const chartContainer = document.getElementById('portfolio-chart-container');
     const totalValueEl = document.getElementById('portfolio-total-value');
@@ -305,6 +312,7 @@ async function updatePortfolioView(range) {
     }
 }
 
+
 function createPortfolioChart(labels, data) {
     const canvasEl = document.getElementById('portfolioChart');
     if (!canvasEl) return;
@@ -321,49 +329,59 @@ function createPortfolioChart(labels, data) {
     });
 }
 
-// --- OTHER RENDER FUNCTIONS ---
+
 async function renderNewsPage() {
     const container = document.getElementById('news-content');
     container.innerHTML = `<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
     const news = await getGeneralNews();
     if (!news || news.length === 0) {
-        container.innerHTML = '<p class="text-secondary">Could not load news.</p>';
+        container.innerHTML = '<p class="text-secondary text-center p-4">Could not load news at the moment. The API might be busy.</p>';
         return;
     }
-    container.innerHTML = `<h2 class="h3 fw-bold mb-4">Market News</h2><div class="row g-4">${news.slice(0,10).map(article => `<div class="col-lg-6"><div class="card h-100 border-0 shadow-sm bg-body-tertiary">${article.image?`<img src="${article.image}" class="card-img-top" alt="News Image" style="height:200px;object-fit:cover" onerror="this.style.display='none'">`:''}<div class="card-body d-flex flex-column"><h5 class="card-title fw-bold">${article.headline}</h5><p class="card-text text-secondary small mb-3">${new Date(article.datetime*1000).toLocaleDateString()}</p><a href="${article.url}" target="_blank" class="btn btn-sm btn-outline-primary mt-auto">Read More</a></div></div></div>`).join('')}</div>`;
+    container.innerHTML = `<h2 class="h3 fw-bold mb-4">Market News</h2><div class="row g-4">${news.slice(0, 20).map(article => `<div class="col-lg-6"><div class="card h-100 border-0 shadow-sm bg-body-tertiary">${article.image?`<img src="${article.image}" class="card-img-top" alt="News Image" style="height:200px;object-fit:cover" onerror="this.style.display='none'">`:''}<div class="card-body d-flex flex-column"><h5 class="card-title fw-bold">${article.headline}</h5><p class="card-text text-secondary small mb-3">${new Date(article.datetime*1000).toLocaleDateString()}</p><a href="${article.url}" target="_blank" class="btn btn-sm btn-outline-primary mt-auto">Read More</a></div></div></div>`).join('')}</div>`;
 }
 
 function renderProfilePage() {
-    document.getElementById('profile-content').innerHTML = `<h2 class="h3 fw-bold mb-4">Account Settings</h2><div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4"><div class="d-flex align-items-center mb-4"><img class="user-avatar-large rounded-circle" src="https://placehold.co/100x100/E2E8F0/4A5568?text=FA" alt="User profile picture"><div class="ms-3"><h3 class="h5 fw-bold mb-0">${state.user.fullName}</h3><p class="text-secondary small mb-0">${state.user.email}</p></div></div><button id="upgrade-btn" class="btn btn-warning fw-bold">Upgrade to Pro</button></div><div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4"><h4 class="h6 fw-bold mb-3">Settings</h4><div class="d-flex justify-content-between align-items-center mb-3"><label for="theme-toggle" class="form-check-label">Dark Mode</label><div class="form-check form-switch"><input type="checkbox" id="theme-toggle" class="form-check-input" role="switch"></div></div><div class="d-flex justify-content-between align-items-center"><label for="currency-select" class="form-label mb-0">Currency</label><select id="currency-select" class="form-select w-auto"><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="GBP">GBP (£)</option></select></div></div><div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4"><h4 class="h6 fw-bold mb-3">Location</h4><div id="location-info" class="text-secondary">Detecting location...</div></div><div class="d-grid"><button id="logout-button" class="btn btn-danger">Log Out</button></div>`;
+    if(!state.user) return;
+
+    const upgradeButtonHtml = state.user.isPro
+        ? `<div class="text-center p-3 bg-brand-green-light rounded-3 text-brand-green fw-bold">You are a Pro Member!</div>`
+        : `<button id="upgrade-btn" class="btn btn-warning fw-bold">Upgrade to Pro</button>`;
+        
+    document.getElementById('profile-content').innerHTML = `<h2 class="h3 fw-bold mb-4">Account Settings</h2><div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4"><div class="d-flex align-items-center mb-4"><img class="user-avatar-large rounded-circle" src="https://placehold.co/100x100/E2E8F0/4A5568?text=${state.user.fullName[0]}" alt="User profile picture"><div class="ms-3"><h3 class="h5 fw-bold mb-0">${state.user.fullName}</h3><p class="text-secondary small mb-0">${state.user.email}</p></div></div>${upgradeButtonHtml}</div><div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4"><h4 class="h6 fw-bold mb-3">Settings</h4><div class="d-flex justify-content-between align-items-center mb-3"><label for="theme-toggle" class="form-check-label">Dark Mode</label><div class="form-check form-switch"><input type="checkbox" id="theme-toggle" class="form-check-input" role="switch"></div></div><div class="d-flex justify-content-between align-items-center"><label for="currency-select" class="form-label mb-0">Currency</label><select id="currency-select" class="form-select w-auto"><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="GBP">GBP (£)</option></select></div></div><div class="card border-0 bg-body-tertiary rounded-4 p-4 mb-4"><h4 class="h6 fw-bold mb-3">Location</h4><div id="location-info" class="text-secondary">Detecting location...</div></div><div class="d-grid"><button id="logout-button" class="btn btn-danger">Log Out</button></div>`;
+    
     document.getElementById('theme-toggle').checked = document.documentElement.dataset.bsTheme === 'dark';
     document.getElementById('theme-toggle').addEventListener('change', toggleTheme);
-    document.getElementById('logout-button').addEventListener('click', () => navigateToPage('welcome-page'));
-    document.getElementById('upgrade-btn').addEventListener('click', () => navigateToPage('pro-page'));
+    document.getElementById('logout-button').addEventListener('click', handleLogout);
+    
+    if (!state.user.isPro) {
+        document.getElementById('upgrade-btn').addEventListener('click', () => navigateToPage('pro-page'));
+    }
+
     document.getElementById('currency-select').value = state.currency;
     document.getElementById('currency-select').addEventListener('change', handleCurrencyChange);
     getUserLocation();
 }
 
 async function renderWishlistPage() {
+    if (!state.user) return;
     const container = document.getElementById('wishlist-content');
     container.innerHTML = `<div class="text-center p-5"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
-    if (state.user.wishlist.length === 0) {
+    if (!state.user.wishlist || state.user.wishlist.length === 0) {
         container.innerHTML = `<h2 class="h3 fw-bold mb-4">My Wishlist</h2><p class="text-secondary">Your wishlist is empty.</p><div class="mt-4"><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#searchModal">Add Stock</button></div>`;
         return;
     }
     const assets = await Promise.all(state.user.wishlist.map(async ticker => ({...await getProfile(ticker),...await getQuote(ticker), symbol: ticker})));
-    container.innerHTML = `<h2 class="h3 fw-bold mb-4">My Wishlist</h2><div class="list-group">${assets.map(asset => `<a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="event.preventDefault(); showStockDetail('${asset.symbol}')"><div class="d-flex align-items-center"><img src="${getOnlineLogo(asset.symbol)}" class="asset-logo me-3 rounded-circle" alt="${asset.name}"><div class="fw-bold">${asset.symbol}<small class="d-block text-secondary">${asset.name||'N/A'}</small></div></div><div class="text-end"><p class="fw-bold mb-0">${formatCurrency(asset.c)}</p><small class="${getChangeClass(asset.d)}">${formatPercentage(asset.dp)}</small></div></a>`).join('')}</div><div class="mt-4"><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#searchModal">Add Stock</button></div>`;
+    container.innerHTML = `<h2 class="h3 fw-bold mb-4">My Wishlist</h2><div class="list-group">${assets.map(asset => {
+        if (!asset || !asset.c) return ''; // Handle case where API fails for a stock
+        return `<a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="event.preventDefault(); showStockDetail('${asset.symbol}')"><div class="d-flex align-items-center"><img src="${getOnlineLogo(asset.symbol)}" class="asset-logo me-3 rounded-circle" alt="${asset.name}"><div class="fw-bold">${asset.symbol}<small class="d-block text-secondary">${asset.name||'N/A'}</small></div></div><div class="text-end"><p class="fw-bold mb-0">${formatCurrency(asset.c)}</p><small class="${getChangeClass(asset.d)}">${formatPercentage(asset.dp)}</small></div></a>`;
+    }).join('')}</div><div class="mt-4"><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#searchModal">Add Stock</button></div>`;
 }
 
 function renderProfileEditPage() {
-    document.getElementById('profile-edit-content').innerHTML = `<h2 class="h3 fw-bold mb-4">Edit Profile</h2><div class="card border-0 bg-body-tertiary rounded-4 p-4"><form id="profile-edit-form"><div class="text-center mb-4"><img class="user-avatar-large rounded-circle mb-2" src="https://placehold.co/100x100/E2E8F0/4A5568?text=FA" alt="User profile picture"><div><button type="button" class="btn btn-sm btn-link">Change Picture</button></div></div><div class="mb-3"><label for="fullName" class="form-label">Full Name</label><input type="text" class="form-control" id="fullName" value="${state.user.fullName}"></div><div class="mb-3"><label for="email" class="form-label">Email address</label><input type="email" class="form-control" id="email" value="${state.user.email}"></div><hr class="my-4"><h3 class="h5 fw-bold mb-3">Change Password</h3><div class="mb-3"><label for="currentPassword" class="form-label">Current Password</label><input type="password" class="form-control" id="currentPassword"></div><div class="mb-3"><label for="newPassword" class="form-label">New Password</label><input type="password" class="form-control" id="newPassword"></div><div class="mb-3"><label for="confirmPassword" class="form-label">Confirm New Password</label><input type="password" class="form-control" id="confirmPassword"></div><button type="submit" class="btn btn-brand-green w-100 fw-semibold py-2 mt-3">Save</button></form></div>`;
-    document.getElementById('profile-edit-form').addEventListener('submit', e => {
-        e.preventDefault();
-        state.user.fullName = document.getElementById('fullName').value;
-        state.user.email = document.getElementById('email').value;
-        document.getElementById('dashboard-username').innerText = state.user.fullName;
-        showMainContent('profile-content');
-    });
+     if (!state.user) return;
+    document.getElementById('profile-edit-content').innerHTML = `<h2 class="h3 fw-bold mb-4">Edit Profile</h2><div class="card border-0 bg-body-tertiary rounded-4 p-4"><form id="profile-edit-form"><div class="text-center mb-4"><img class="user-avatar-large rounded-circle mb-2" src="https://placehold.co/100x100/E2E8F0/4A5568?text=${state.user.fullName[0]}" alt="User profile picture"><div><button type="button" class="btn btn-sm btn-link">Change Picture</button></div></div><div class="mb-3"><label for="fullName" class="form-label">Full Name</label><input type="text" class="form-control" id="fullName" value="${state.user.fullName}"></div><div class="mb-3"><label for="email" class="form-label">Email address</label><input type="email" class="form-control" id="email" value="${state.user.email}" disabled></div><hr class="my-4"><h3 class="h5 fw-bold mb-3">Change Password</h3><div class="mb-3"><label for="newPassword" class="form-label">New Password</label><input type="password" class="form-control" id="newPassword" placeholder="Leave blank to keep current password"></div><div class="mb-3"><label for="confirmPassword" class="form-label">Confirm New Password</label><input type="password" class="form-control" id="confirmPassword"></div><button type="submit" class="btn btn-brand-green w-100 fw-semibold py-2 mt-3">Save Changes</button></form></div>`;
+    document.getElementById('profile-edit-form').addEventListener('submit', handleProfileUpdate);
 }
 
 // --- STOCK DETAIL PAGE ---
@@ -378,7 +396,7 @@ async function showStockDetail(ticker) {
         document.getElementById('back-to-dashboard-btn-detail').addEventListener('click', () => window.history.back());
         return;
     }
-    const sharesOwned = state.user.portfolio.find(h => h.ticker === ticker)?.shares || 0;
+    const sharesOwned = state.user?.portfolio.find(h => h.ticker === ticker)?.shares || 0;
     contentArea.innerHTML = `<header class="d-flex justify-content-between align-items-center mb-4"><button id="back-to-dashboard-btn-detail" class="btn btn-link p-2"><i class="bi bi-arrow-left fs-4"></i></button><h1 class="h5 fw-bold text-body-emphasis mb-0">${profile.ticker||ticker}</h1><div id="watchlist-action-container" class="text-end" style="width:40px"></div></header><div class="max-w-xl mx-auto w-100"><div class="mb-4"><p class="text-secondary h5">${profile.name}</p><div class="d-flex align-items-end gap-3"><p class="display-4 fw-bold mb-0">${formatCurrency(quote.c)}</p><p class="h5 fw-semibold mb-2 ${getChangeClass(quote.d)}">${quote.d>=0?'+':''}${quote.d.toFixed(2)} (${formatPercentage(quote.dp)})</p></div></div><div class="chart-container-large mb-4"><canvas id="mainStockChart"></canvas></div><div id="time-range-selector" class="btn-group w-100 mb-4" role="group"><button type="button" class="btn btn-outline-secondary" data-range="1D">1D</button><button type="button" class="btn btn-outline-secondary" data-range="1W">1W</button><button type="button" class="btn btn-outline-secondary" data-range="1M">1M</button><button type="button" class="btn btn-outline-secondary active" data-range="1Y">1Y</button></div><div class="d-grid gap-3" style="grid-template-columns:1fr 1fr"><button class="btn btn-brand-green btn-lg fw-bold" onclick="openTradeModal('${ticker}','buy')">Buy</button><button class="btn btn-brand-red btn-lg fw-bold" onclick="openTradeModal('${ticker}','sell')" ${!sharesOwned?'disabled':''}>Sell</button></div><div id="stock-news-container" class="mt-5"><h3 class="h4 fw-bold mb-3">Relevant News</h3><div id="stock-news-list"></div></div></div>`;
     document.getElementById('back-to-dashboard-btn-detail').addEventListener('click', () => window.history.back());
     document.querySelectorAll('#time-range-selector button').forEach(button => button.addEventListener('click', e => {
@@ -390,6 +408,7 @@ async function showStockDetail(ticker) {
     loadStockNews(ticker);
     renderWatchlistButton(ticker);
 }
+
 
 async function loadStockNews(ticker) {
     const container = document.getElementById('stock-news-list');
@@ -403,19 +422,37 @@ async function loadStockNews(ticker) {
     container.innerHTML = `<div class="list-group">${news.slice(0,5).map(article=>`<a href="${article.url}" target="_blank" class="list-group-item list-group-item-action"><p class="fw-bold mb-1">${article.headline}</p><small class="text-secondary">${new Date(article.datetime*1000).toLocaleDateString()}</small></a>`).join('')}</div>`;
 }
 
-function toggleWatchlist(ticker) {
+async function toggleWatchlist(ticker) {
+    if (!state.user) return;
+    // Ensure wishlist is an array
+    if (!Array.isArray(state.user.wishlist)) {
+        state.user.wishlist = [];
+    }
     const index = state.user.wishlist.indexOf(ticker);
-    if (index > -1) state.user.wishlist.splice(index, 1);
-    else state.user.wishlist.push(ticker);
+    if (index > -1) {
+        state.user.wishlist.splice(index, 1);
+    } else {
+        state.user.wishlist.push(ticker);
+    }
+    // Correctly call updateUserInDB with user ID
+    await updateUserInDB(state.user.uid, { wishlist: state.user.wishlist });
     renderWatchlistButton(ticker);
+    // Also re-render the wishlist page if it's the currently active view
+    if (document.getElementById('wishlist-content')?.style.display === 'block') {
+        renderWishlistPage();
+    }
 }
 
 function renderWatchlistButton(ticker) {
     const container = document.getElementById('watchlist-action-container');
-    if (!container) return;
-    const isInWatchlist = state.user.wishlist.includes(ticker);
+    if (!container || !state.user) {
+        if(container) container.innerHTML = '';
+        return;
+    };
+    const isInWatchlist = state.user.wishlist && state.user.wishlist.includes(ticker);
     container.innerHTML = `<button class="btn btn-link p-2" onclick="toggleWatchlist('${ticker}')"><i class="bi ${isInWatchlist ? 'bi-star-fill text-brand-amber' : 'bi-star text-secondary'} fs-4"></i></button>`;
 }
+
 
 // --- CHARTING ---
 async function updateStockChart(range, currentPrice) {
@@ -438,7 +475,7 @@ async function updateStockChart(range, currentPrice) {
         candles = generateFakeCandles(currentPrice, 50, range);
     }
     if (chartContainer) chartContainer.innerHTML = `<canvas id="mainStockChart"></canvas>`;
-    const isPositive = candles.c[candles.c.length - 1] > candles.c[0];
+    const isPositive = candles.c.length > 1 ? candles.c[candles.c.length - 1] > candles.c[0] : false;
     createMainStockChart(candles.t.map(t => new Date(t * 1000)), candles.c, isPositive);
 }
 
@@ -458,8 +495,13 @@ function createMainStockChart(labels, data, isPositive) {
     });
 }
 
+
 // --- TRADE MODAL & LOGIC ---
 async function openTradeModal(ticker, action) {
+    if (!state.user) {
+        alert("Please log in to trade.");
+        return;
+    }
     const form = document.getElementById('trade-form');
     form.reset();
     form.classList.remove('was-validated');
@@ -489,6 +531,7 @@ function updateEstimatedTotal() {
 
 async function handleTrade(event) {
     event.preventDefault();
+    if (!state.user) return;
     const form = event.target;
     const ticker = form.querySelector('#trade-ticker').value;
     const action = form.querySelector('#trade-action').value;
@@ -502,35 +545,50 @@ async function handleTrade(event) {
         sharesInput.classList.add('is-invalid');
         return;
     }
+    
+    const newPortfolio = [...state.user.portfolio];
+    let newCash = state.user.cash;
+
     if (action === 'buy') {
         const cost = shares * price;
-        if (cost > state.user.cash) {
+        if (cost > newCash) {
             errorDiv.textContent = `Insufficient funds.`;
             sharesInput.classList.add('is-invalid');
             return;
         }
-        state.user.cash -= cost;
-        const existingHolding = state.user.portfolio.find(h => h.ticker === ticker);
+        newCash -= cost;
+        const existingHolding = newPortfolio.find(h => h.ticker === ticker);
         if (existingHolding) existingHolding.shares += shares;
-        else state.user.portfolio.push({ ticker, shares });
+        else newPortfolio.push({ ticker, shares });
     } else {
-        const existingHolding = state.user.portfolio.find(h => h.ticker === ticker);
+        const existingHolding = newPortfolio.find(h => h.ticker === ticker);
         if (!existingHolding || shares > existingHolding.shares) {
             errorDiv.textContent = `You cannot sell more shares than you own.`;
             sharesInput.classList.add('is-invalid');
             return;
         }
-        state.user.cash += shares * price;
+        newCash += shares * price;
         existingHolding.shares -= shares;
-        if (existingHolding.shares === 0) state.user.portfolio = state.user.portfolio.filter(h => h.ticker !== ticker);
+        if (existingHolding.shares === 0) {
+            const index = newPortfolio.findIndex(h => h.ticker === ticker);
+            newPortfolio.splice(index, 1);
+        }
     }
+    
+    state.user.cash = newCash;
+    state.user.portfolio = newPortfolio;
+    await updateUserInDB(state.user.uid, { cash: newCash, portfolio: newPortfolio });
+
     state.tradeModal.hide();
     const currentPage = window.location.hash.substring(1);
-    if (currentPage === 'stock-detail-page' && state.currentStock === ticker) showStockDetail(ticker);
+    if (currentPage === 'stock-detail-page' && state.currentStock === ticker) {
+        showStockDetail(ticker);
+    }
     const activeContent = document.querySelector('.main-content-area[style*="block"]');
     if (activeContent) showMainContent(activeContent.id);
     else renderHomePageSummary();
 }
+
 
 // --- EVENT HANDLERS & OTHER LOGIC ---
 function toggleTheme() {
@@ -594,20 +652,56 @@ function getUserLocation() {
 
 function showPaymentPage() {
     const isYearly = document.getElementById('plan-toggle').checked;
-    state.user.isYearlyPlan = isYearly;
     document.getElementById('payment-monthly-plan').classList.toggle('d-none', isYearly);
     document.getElementById('payment-yearly-plan').classList.toggle('d-none', !isYearly);
     navigateToPage('payment-page');
 }
 
+async function handleSubscriptionPurchase() {
+    if (!state.user) {
+        alert("Please log in to purchase a subscription.");
+        navigateToPage('auth-container');
+        return;
+    }
+
+    try {
+        // In a real app, you would process payment here.
+        // We'll just simulate a successful purchase.
+        await updateUserInDB(state.user.uid, { isPro: true });
+        state.user.isPro = true; // Update local state
+
+        alert("Congratulations! You've upgraded to Stockly Pro.");
+        renderProfilePage(); // Re-render the profile page to show pro status
+        navigateToPage('home-page');
+        showMainContent('profile-content');
+    } catch (error) {
+        alert("There was an error upgrading your account. Please try again.");
+        console.error("Subscription purchase error:", error);
+    }
+}
+
+function generateSessionId() {
+    return 'sess_' + Math.random().toString(36).substr(2, 9);
+}
+
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     if (isAppInitialized) return;
     isAppInitialized = true;
+    
+    // Generate or retrieve session ID
+    let sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) {
+        sessionId = generateSessionId();
+        localStorage.setItem('sessionId', sessionId);
+    }
+    state.sessionId = sessionId;
 
+
+    // --- EVENT LISTENERS ---
     document.getElementById('lets-go-btn').addEventListener('click', () => showAuthSubPage('login-page'));
-    document.getElementById('login-form').addEventListener('submit', (e) => { e.preventDefault(); navigateToPage('home-page'); });
-    document.getElementById('register-form').addEventListener('submit', (e) => { e.preventDefault(); navigateToPage('home-page'); });
+    
     document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); showMainContent(link.dataset.target); }));
     document.getElementById('show-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('register-page'); });
     document.getElementById('show-login-from-register').addEventListener('click', (e) => { e.preventDefault(); showAuthSubPage('login-page'); });
@@ -619,31 +713,56 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('yearly-plan').classList.toggle('d-none', !isYearly);
     });
     document.getElementById('upgrade-now-btn')?.addEventListener('click', showPaymentPage);
+    document.getElementById('buy-now-btn')?.addEventListener('click', handleSubscriptionPurchase);
     document.getElementById('search-input').addEventListener('input', handleSearch);
     document.getElementById('trade-form').addEventListener('submit', handleTrade);
     document.getElementById('trade-shares').addEventListener('input', updateEstimatedTotal);
+    document.getElementById('add-to-cart-btn').addEventListener('click', handleAddToCart);
+
 
     const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.documentElement.dataset.bsTheme = savedTheme;
 
-    // FIX: Corrected initialization of Bootstrap Modals
     state.searchModal = new bootstrap.Modal(document.getElementById('searchModal'));
     state.tradeModal = new bootstrap.Modal(document.getElementById('tradeModal'));
 
     getExchangeRates();
-    document.getElementById('dashboard-username').innerText = state.user.fullName;
-
-    window.addEventListener('popstate', (event) => {
-        const pageId = event.state?.page || window.location.hash.substring(1) || 'welcome-page';
-        if (pageId && document.getElementById(pageId)) navigateToPage(pageId);
-        else navigateToPage('welcome-page');
+    
+    // Initialize Auth listener
+    initAuth((user) => {
+        if (user) {
+            // User is signed in.
+            getUserData(user.uid).then(userData => {
+                if (!userData) {
+                    console.error("Could not load user data from DB. Signing out.");
+                    handleLogout();
+                    return;
+                }
+                state.user = userData;
+                document.getElementById('dashboard-username').innerText = state.user.fullName;
+                const userInitial = state.user.fullName ? state.user.fullName[0].toUpperCase() : 'U';
+                document.querySelector('.user-avatar').src = `https://placehold.co/100x100/E2E8F0/4A5568?text=${userInitial}`;
+                
+                // Merge session cart with user cart
+                mergeSessionCart(state.sessionId, user.uid);
+                
+                navigateToPage('home-page');
+                showMainContent('markets-content');
+            });
+        } else {
+            // User is signed out.
+            state.user = null;
+            navigateToPage('welcome-page');
+        }
     });
 
-    const initialHash = window.location.hash.substring(1);
-    if (initialHash && document.getElementById(initialHash)) {
-        navigateToPage(initialHash);
-        if (initialHash === 'home-page') showMainContent('markets-content');
-    } else {
-        navigateToPage('welcome-page');
-    }
+    window.addEventListener('popstate', (event) => {
+        if(state.user) {
+            const pageId = event.state?.page || window.location.hash.substring(1) || 'home-page';
+             if (pageId && document.getElementById(pageId)) navigateToPage(pageId);
+        } else {
+             navigateToPage('welcome-page');
+        }
+    });
+    
 });
