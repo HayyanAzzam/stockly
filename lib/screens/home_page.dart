@@ -1,0 +1,757 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
+import '../providers/portfolio_provider.dart';
+import 'dart:ui';
+import 'stock_detail_page.dart';
+import 'cart_page.dart';
+import '../services/finnhub_service.dart';
+import '../providers/wishlist_provider.dart';
+import 'wishlist_page.dart';
+import 'portfolio_page.dart';
+import 'news_page.dart';
+import 'profile_page.dart';
+import '../providers/currency_provider.dart';
+
+class UserSession {
+  static String? username;
+  static String? email;
+  static String currency = 'USD (\$)';
+  static double exchangeRate = 1.0; // Assuming a default exchange rate
+}
+
+class HomePage extends StatefulWidget {
+  final int initialTab;
+  const HomePage({Key? key, this.initialTab = 3}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialTab;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      PortfolioPage(),
+      WishlistPage(),
+      CartPage(),
+      HomeTabPage(),
+      NewsPage(),
+      ProfilePage(),
+    ];
+    return Scaffold(
+      backgroundColor: const Color(0xFF23272A),
+      body: pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF23272A),
+        selectedItemColor: const Color(0xFF22C55E),
+        unselectedItemColor: const Color(0xFFB0B3B8),
+        currentIndex: _selectedIndex,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            label: 'Portfolio',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.star_border),
+            label: 'Wishlist',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart_outlined),
+            label: 'Cart',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.show_chart),
+            label: 'Markets',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.article_outlined),
+            label: 'News',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// The Markets tab content (your current HomePage content)
+class HomeTabPage extends StatefulWidget {
+  const HomeTabPage({Key? key}) : super(key: key);
+
+  @override
+  State<HomeTabPage> createState() => _HomeTabPageState();
+}
+
+class _HomeTabPageState extends State<HomeTabPage> {
+  String? _lastCurrency;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currencyProvider = Provider.of<CurrencyProvider>(context);
+    final marketProvider = Provider.of<MarketProvider>(context, listen: false);
+    if (_lastCurrency != currencyProvider.currency) {
+      _lastCurrency = currencyProvider.currency;
+      marketProvider.fetchMarketStocks(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final marketProvider = Provider.of<MarketProvider>(context);
+    final portfolioProvider = Provider.of<PortfolioProvider>(context);
+    final wishlistProvider = Provider.of<WishlistProvider>(context);
+    // Update portfolio value with latest prices
+    if (marketProvider.marketStocks.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        portfolioProvider.updatePortfolioValueFromMarket(
+          marketProvider.marketStocks,
+        );
+      });
+    }
+    return Scaffold(
+      backgroundColor: const Color(0xFF23272A),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: const Color(0xFFB0B3B8),
+                        child: Text(
+                          (UserSession.username?.isNotEmpty == true)
+                              ? UserSession.username![0].toUpperCase()
+                              : 'U',
+                          style: const TextStyle(
+                            fontSize: 28,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Good morning',
+                            style: TextStyle(
+                              color: Color(0xFFB0B3B8),
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            (UserSession.username != null &&
+                                    UserSession.username!.isNotEmpty)
+                                ? UserSession.username![0].toUpperCase() +
+                                      UserSession.username!.substring(1)
+                                : '',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () async {
+                          await showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => const StockSearchSheet(),
+                          );
+                        },
+                        child: Icon(Icons.search, color: Color(0xFFB0B3B8)),
+                      ),
+                      const SizedBox(width: 16),
+                      Icon(Icons.notifications_none, color: Color(0xFFB0B3B8)),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF313338),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  'Portfolio Value',
+                                  style: TextStyle(
+                                    color: Color(0xFFB0B3B8),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  CurrencyProvider.formatCurrency(
+                                    context,
+                                    portfolioProvider.portfolioValue,
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  '+0.00% Today',
+                                  style: TextStyle(
+                                    color: Color(0xFF22C55E),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF313338),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  'Available Cash',
+                                  style: TextStyle(
+                                    color: Color(0xFFB0B3B8),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  CurrencyProvider.formatCurrency(
+                                    context,
+                                    portfolioProvider.availableCash,
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Market Indices',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 2.2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: marketProvider.marketStocks.map((stock) {
+                      final isUp = stock["isUp"] as bool;
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => StockDetailPage(
+                                symbol: stock["symbol"],
+                                name: stock["name"],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: isUp
+                                ? const Color(0xFF166534)
+                                : const Color(0xFF7F1D1D),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 12.0,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    stock["name"],
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  CurrencyProvider.formatCurrency(
+                                    context,
+                                    stock["price"],
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      'Recommended Investments',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: SizedBox(
+                    height: 120,
+                    child: Stack(
+                      children: [
+                        GridView.count(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 2.7,
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          children: List.generate(
+                            4,
+                            (index) => Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF313338),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                              child: Container(
+                                color: Colors.black.withOpacity(0.5),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  'Pro Feature',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      'Stocks',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: GridView.count(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 2.2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _StockLogoButton(
+                        icon: Icons.apple,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StockDetailPage(
+                              symbol: 'AAPL',
+                              name: 'Apple Inc',
+                            ),
+                          ),
+                        ),
+                      ),
+                      _StockLogoButton(
+                        icon: Icons.g_mobiledata,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StockDetailPage(
+                              symbol: 'GOOGL',
+                              name: 'Alphabet Inc',
+                            ),
+                          ),
+                        ),
+                      ),
+                      _StockLogoButton(
+                        icon: Icons.window,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StockDetailPage(
+                              symbol: 'MSFT',
+                              name: 'Microsoft Corp',
+                            ),
+                          ),
+                        ),
+                      ),
+                      _StockLogoButton(
+                        icon: Icons.memory,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StockDetailPage(
+                              symbol: 'NVDA',
+                              name: 'NVIDIA Corp',
+                            ),
+                          ),
+                        ),
+                      ),
+                      _StockLogoButton(
+                        icon: Icons.shopping_bag,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StockDetailPage(
+                              symbol: 'AMZN',
+                              name: 'Amazon.com Inc',
+                            ),
+                          ),
+                        ),
+                      ),
+                      _StockLogoButton(
+                        icon: Icons.currency_bitcoin,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StockDetailPage(
+                              symbol: 'BTC-USD',
+                              name: 'Bitcoin',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StockLogoButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _StockLogoButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF313338),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(child: Icon(icon, size: 40, color: Colors.white)),
+      ),
+    );
+  }
+}
+
+class StockSearchSheet extends StatefulWidget {
+  const StockSearchSheet({Key? key}) : super(key: key);
+
+  @override
+  State<StockSearchSheet> createState() => _StockSearchSheetState();
+}
+
+class _StockSearchSheetState extends State<StockSearchSheet> {
+  final TextEditingController _controller = TextEditingController();
+  List<Map<String, dynamic>> _results = [];
+  bool _loading = false;
+  String _query = '';
+
+  void _search(String query) async {
+    setState(() {
+      _loading = true;
+      _query = query;
+    });
+    final service = FinnhubService();
+    final results = await service.searchStocks(query);
+    setState(() {
+      _results = results;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final wishlistProvider = Provider.of<WishlistProvider>(context);
+    final mediaQuery = MediaQuery.of(context);
+    final maxHeight = mediaQuery.size.height * 0.75;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF23272A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          padding: EdgeInsets.only(
+            left: 16.0,
+            right: 16.0,
+            top: 16.0,
+            bottom: mediaQuery.viewInsets.bottom + 16.0,
+          ),
+          child: SafeArea(
+            top: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight, maxWidth: 400),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Search Stocks',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _controller,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Search by name or symbol',
+                      hintStyle: const TextStyle(color: Color(0xFFB0B3B8)),
+                      filled: true,
+                      fillColor: const Color(0xFF23272A),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF22C55E)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF22C55E)),
+                      ),
+                      suffixIcon: _controller.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear,
+                                color: Color(0xFF22C55E),
+                              ),
+                              onPressed: () {
+                                _controller.clear();
+                                setState(() {
+                                  _results = [];
+                                  _query = '';
+                                });
+                              },
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      if (value.isNotEmpty) {
+                        _search(value);
+                      } else {
+                        setState(() {
+                          _results = [];
+                          _query = '';
+                        });
+                      }
+                    },
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: _loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : (_results.isEmpty && _query.isNotEmpty)
+                        ? const Center(
+                            child: Text(
+                              'No results found',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: _results.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(color: Color(0xFF313338)),
+                            itemBuilder: (context, index) {
+                              final stock = _results[index];
+                              final inWishlist = wishlistProvider.isInWishlist(
+                                stock['symbol'],
+                              );
+                              return ListTile(
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => StockDetailPage(
+                                        symbol: stock['symbol'] ?? '',
+                                        name: stock['description'] ?? '',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                title: Text(
+                                  stock['symbol'] ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  stock['description'] ?? '',
+                                  style: const TextStyle(
+                                    color: Color(0xFFB0B3B8),
+                                  ),
+                                ),
+                                trailing: IconButton(
+                                  icon: Icon(
+                                    inWishlist ? Icons.star : Icons.star_border,
+                                    color: inWishlist
+                                        ? Colors.amber
+                                        : Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    if (!inWishlist) {
+                                      wishlistProvider.addToWishlist(stock);
+                                    } else {
+                                      wishlistProvider.removeFromWishlist(
+                                        stock['symbol'],
+                                      );
+                                    }
+                                    setState(() {});
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
