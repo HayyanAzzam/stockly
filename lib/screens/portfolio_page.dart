@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'home_page.dart';
 import '../providers/currency_provider.dart';
 import 'stock_detail_page.dart';
+import '../providers/market_provider.dart';
 
 class PortfolioPage extends StatefulWidget {
   const PortfolioPage({Key? key}) : super(key: key);
@@ -31,12 +32,29 @@ class _PortfolioPageState extends State<PortfolioPage> {
   @override
   Widget build(BuildContext context) {
     final portfolioProvider = Provider.of<PortfolioProvider>(context);
+    final marketProvider = Provider.of<MarketProvider>(context, listen: false);
     final assets = portfolioProvider.ownedStocks.entries.toList();
     final totalValue = portfolioProvider.portfolioValue;
     final availableCash = portfolioProvider.availableCash;
-    // Dummy performance and chart data for now
-    final performance = -2.7;
-    final chartColor = performance >= 0
+    // Calculate portfolio change as weighted sum of real change values
+    double changeSum = 0.0;
+    double valueSum = 0.0;
+    for (final entry in assets) {
+      final symbol = entry.key;
+      final data = entry.value;
+      final value = (data['value'] ?? 0.0) as double;
+      // Find the real change value from marketStocks
+      final marketStock = marketProvider.marketStocks.firstWhere(
+        (s) => s['symbol'] == symbol,
+        orElse: () => {},
+      );
+      final change = marketStock['change'] ?? 0.0;
+      changeSum += change * (data['shares'] ?? 0.0);
+      valueSum += value;
+    }
+    final percentChange = (valueSum > 0) ? (changeSum / valueSum) * 100 : 0.0;
+    final isUp = changeSum >= 0;
+    final chartColor = percentChange >= 0
         ? const Color(0xFF22C55E)
         : const Color(0xFFEF4444);
 
@@ -146,9 +164,9 @@ class _PortfolioPageState extends State<PortfolioPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${performance > 0 ? '+' : ''}${performance.toStringAsFixed(1)}% This Year',
+                                '${isUp ? '+' : ''}${changeSum.abs().toStringAsFixed(2)} (${percentChange.abs().toStringAsFixed(2)}%)',
                                 style: TextStyle(
-                                  color: performance >= 0
+                                  color: isUp
                                       ? Color(0xFF22C55E)
                                       : Color(0xFFEF4444),
                                   fontSize: 16,
@@ -324,7 +342,16 @@ class _PortfolioPageState extends State<PortfolioPage> {
                     final data = entry.value;
                     final shares = data['shares'] ?? 0.0;
                     final value = data['value'] ?? 0.0;
-                    final change = data['change'] ?? 0.0;
+                    final marketProvider = Provider.of<MarketProvider>(
+                      context,
+                      listen: false,
+                    );
+                    // Use real change value for each asset
+                    final marketStock = marketProvider.marketStocks.firstWhere(
+                      (s) => s['symbol'] == symbol,
+                      orElse: () => {},
+                    );
+                    final change = marketStock['change'] ?? 0.0;
                     final isUp = change >= 0;
                     final name = data['name'] ?? symbol;
                     final logo = data['logo'];
@@ -399,15 +426,16 @@ class _PortfolioPageState extends State<PortfolioPage> {
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                    fontSize: 18,
                                   ),
                                 ),
+                                const SizedBox(height: 4),
                                 Text(
-                                  '${isUp ? '+' : ''}${change.toStringAsFixed(2)}%',
+                                  '${isUp ? '+' : ''}${change.abs().toStringAsFixed(2)}',
                                   style: TextStyle(
                                     color: isUp
-                                        ? const Color(0xFF22C55E)
-                                        : const Color(0xFFEF4444),
+                                        ? Color(0xFF22C55E)
+                                        : Color(0xFFEF4444),
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),

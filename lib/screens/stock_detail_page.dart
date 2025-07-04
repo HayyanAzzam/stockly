@@ -9,6 +9,7 @@ import '../providers/cart_provider.dart';
 import '../providers/wishlist_provider.dart';
 import 'home_page.dart';
 import '../providers/currency_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StockDetailPage extends StatefulWidget {
   final String symbol;
@@ -38,6 +39,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
   String? companyLogo;
   bool profileLoading = true;
 
+  late Future<List<Map<String, dynamic>>> _newsFuture;
+
   @override
   void initState() {
     super.initState();
@@ -46,6 +49,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
       fetchPrice();
       fetchChartData();
     });
+    _newsFuture = _finnhubService.fetchStockNews(widget.symbol);
   }
 
   Future<void> fetchProfile() async {
@@ -428,33 +432,73 @@ class _StockDetailPageState extends State<StockDetailPage> {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: ListView(
-                children: [
-                  _NewsTile(
-                    title:
-                        'Robinhood Goes All In on Crypto With Major Product Push',
-                    date: '6/30/2025',
-                  ),
-                  _NewsTile(
-                    title:
-                        'Privacy-focused app maker Proton sues Apple over alleged anticompetitive practices and fees',
-                    date: '6/30/2025',
-                  ),
-                  _NewsTile(
-                    title: 'Sector Update: Tech Stocks Rise Monday Afternoon',
-                    date: '6/30/2025',
-                  ),
-                  _NewsTile(
-                    title:
-                        'Nvidia Could Be Days Away From a \$4 Trillion Valuation',
-                    date: '6/30/2025',
-                  ),
-                  _NewsTile(
-                    title:
-                        'Bond Traders Basking in Gains Bet Fed Will Fuel Winning Streak',
-                    date: '6/30/2025',
-                  ),
-                ],
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _newsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Failed to load news',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No news available',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    );
+                  }
+                  final newsList = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: newsList.length,
+                    itemBuilder: (context, index) {
+                      final news = newsList[index];
+                      final headline = news['headline'] ?? '';
+                      final url = news['url'] ?? '';
+                      final datetime = news['datetime'] != null
+                          ? DateTime.fromMillisecondsSinceEpoch(
+                              news['datetime'] * 1000,
+                            )
+                          : null;
+                      final dateStr = datetime != null
+                          ? '${datetime.month}/${datetime.day}/${datetime.year}'
+                          : '';
+                      return _NewsTile(
+                        title: headline,
+                        date: dateStr,
+                        onTap: () async {
+                          if (url.isEmpty) return;
+                          final uri = Uri.parse(url);
+                          try {
+                            final launched = await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                            if (!launched && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Could not open the article.'),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Could not open the article.'),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
@@ -507,35 +551,39 @@ class _TimeFrameButton extends StatelessWidget {
 class _NewsTile extends StatelessWidget {
   final String title;
   final String date;
-  const _NewsTile({required this.title, required this.date});
+  final VoidCallback? onTap;
+  const _NewsTile({required this.title, required this.date, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF23272A),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF6B7280), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF23272A),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF6B7280), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            date,
-            style: const TextStyle(color: Color(0xFFB0B3B8), fontSize: 13),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              date,
+              style: const TextStyle(color: Color(0xFFB0B3B8), fontSize: 13),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -729,90 +777,125 @@ class _BuySellDialogState extends State<BuySellDialog> {
               Text(error!, style: const TextStyle(color: Colors.red)),
             ],
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: (widget.isBuy ? canBuy : canSell)
-                        ? () {
-                            cartProvider.addItem(
-                              CartItem(
-                                symbol: widget.symbol,
-                                name: widget.name,
-                                price: widget.price,
-                                shares: shares,
-                                type: widget.isBuy ? 'buy' : 'sell',
-                              ),
-                            );
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Added to cart')),
-                            );
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text(
-                      'Add to Cart',
-                      style: TextStyle(color: Colors.white),
+            if (widget.isBuy)
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: canBuy
+                          ? () {
+                              cartProvider.addItem(
+                                CartItem(
+                                  symbol: widget.symbol,
+                                  name: widget.name,
+                                  price: widget.price,
+                                  shares: shares,
+                                  type: 'buy',
+                                ),
+                              );
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Added to cart')),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF22C55E),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Add to Cart',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            if (!widget.isBuy)
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _sharesController.text = widget.sharesOwned
+                              .toStringAsFixed(2);
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF22C55E),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Sell All',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFF313338),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFF313338),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
-                  ),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(color: Colors.white),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: (widget.isBuy ? canBuy : canSell)
-                      ? () {
-                          if (widget.isBuy) {
-                            portfolioProvider.buyStock(
-                              widget.symbol,
-                              widget.price,
-                              shares,
-                            );
-                          } else {
-                            portfolioProvider.sellStock(
-                              widget.symbol,
-                              widget.price,
-                              shares,
-                            );
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: (widget.isBuy ? canBuy : canSell)
+                        ? () {
+                            if (widget.isBuy) {
+                              portfolioProvider.buyStock(
+                                widget.symbol,
+                                widget.price,
+                                shares,
+                              );
+                            } else {
+                              portfolioProvider.sellStock(
+                                widget.symbol,
+                                widget.price,
+                                shares,
+                              );
+                            }
+                            Navigator.pop(context);
                           }
-                          Navigator.pop(context);
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.isBuy
-                        ? const Color(0xFF22C55E)
-                        : const Color(0xFFEF4444),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.isBuy
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFFEF4444),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    widget.isBuy ? 'Confirm Purchase' : 'Confirm Sale',
-                    style: const TextStyle(color: Colors.white),
+                    child: Text(
+                      'Confirm',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],

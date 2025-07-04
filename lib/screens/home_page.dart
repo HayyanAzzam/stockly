@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../state/app_state.dart';
 import '../providers/portfolio_provider.dart';
+import '../providers/market_provider.dart';
 import 'dart:ui';
 import 'stock_detail_page.dart';
 import 'cart_page.dart';
@@ -49,7 +49,7 @@ class _HomePageState extends State<HomePage> {
     ];
     return Scaffold(
       backgroundColor: const Color(0xFF23272A),
-      body: pages[_selectedIndex],
+      body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF23272A),
         selectedItemColor: const Color(0xFF22C55E),
@@ -102,15 +102,21 @@ class HomeTabPage extends StatefulWidget {
 
 class _HomeTabPageState extends State<HomeTabPage> {
   String? _lastCurrency;
+  static bool _shouldReloadMarketData = true;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final currencyProvider = Provider.of<CurrencyProvider>(context);
     final marketProvider = Provider.of<MarketProvider>(context, listen: false);
+
     if (_lastCurrency != currencyProvider.currency) {
       _lastCurrency = currencyProvider.currency;
-      marketProvider.fetchMarketStocks(context);
+      _shouldReloadMarketData = true;
+    }
+    if (_shouldReloadMarketData) {
+      _shouldReloadMarketData = false;
+      marketProvider.fetchMarketData(context);
     }
   }
 
@@ -119,8 +125,26 @@ class _HomeTabPageState extends State<HomeTabPage> {
     final marketProvider = Provider.of<MarketProvider>(context);
     final portfolioProvider = Provider.of<PortfolioProvider>(context);
     final wishlistProvider = Provider.of<WishlistProvider>(context);
-    // Update portfolio value with latest prices
-    if (marketProvider.marketStocks.isNotEmpty) {
+    final assets = portfolioProvider.ownedStocks.entries.toList();
+    // Calculate portfolio change as weighted sum of real change values (same as portfolio page)
+    double changeSum = 0.0;
+    double valueSum = 0.0;
+    for (final entry in assets) {
+      final symbol = entry.key;
+      final data = entry.value;
+      final value = (data['value'] ?? 0.0) as double;
+      final marketStock = marketProvider.marketStocks.firstWhere(
+        (s) => s['symbol'] == symbol,
+        orElse: () => {},
+      );
+      final change = marketStock['change'] ?? 0.0;
+      changeSum += change * (data['shares'] ?? 0.0);
+      valueSum += value;
+    }
+    final percentChange = (valueSum > 0) ? (changeSum / valueSum) * 100 : 0.0;
+    final isUp = changeSum >= 0;
+    // Update portfolio value with latest prices (only if not loading)
+    if (marketProvider.marketStocks.isNotEmpty && !marketProvider.isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         portfolioProvider.updatePortfolioValueFromMarket(
           marketProvider.marketStocks,
@@ -232,11 +256,14 @@ class _HomeTabPageState extends State<HomeTabPage> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text(
-                                  '+0.00% Today',
+                                Text(
+                                  '${isUp ? '+' : ''}${changeSum.abs().toStringAsFixed(2)} (${percentChange.abs().toStringAsFixed(2)}%)',
                                   style: TextStyle(
-                                    color: Color(0xFF22C55E),
+                                    color: isUp
+                                        ? Color(0xFF22C55E)
+                                        : Color(0xFFEF4444),
                                     fontSize: 14,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
@@ -295,82 +322,90 @@ class _HomeTabPageState extends State<HomeTabPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 2.2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: marketProvider.marketStocks.map((stock) {
-                      final isUp = stock["isUp"] as bool;
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => StockDetailPage(
-                                symbol: stock["symbol"],
-                                name: stock["name"],
+                if (marketProvider.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 2.2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: marketProvider.marketIndices.map((index) {
+                        final isUp = index["isUp"] as bool;
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => StockDetailPage(
+                                  symbol: index["symbol"],
+                                  name: index["name"],
+                                ),
                               ),
+                            );
+                          },
+                          child: Container(
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: isUp
+                                  ? const Color(0xFF166534)
+                                  : const Color(0xFF7F1D1D),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        },
-                        child: Container(
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: isUp
-                                ? const Color(0xFF166534)
-                                : const Color(0xFF7F1D1D),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                              vertical: 12.0,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    stock["name"],
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                                vertical: 12.0,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      index["name"],
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    CurrencyProvider.formatCurrency(
+                                      context,
+                                      index["price"],
+                                    ),
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 15,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                Text(
-                                  CurrencyProvider.formatCurrency(
-                                    context,
-                                    stock["price"],
-                                  ),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
+                        );
+                      }).toList(),
+                    ),
                   ),
-                ),
                 const SizedBox(height: 16),
+                // Pro Feature: Recommended Investments (locked)
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Text(
                       'Recommended Investments',
                       style: TextStyle(
@@ -383,7 +418,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
                 ),
                 const SizedBox(height: 8),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: SizedBox(
                     height: 120,
                     child: Stack(
@@ -433,9 +468,9 @@ class _HomeTabPageState extends State<HomeTabPage> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Text(
-                      'Stocks',
+                      'Trending Stocks',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -445,116 +480,93 @@ class _HomeTabPageState extends State<HomeTabPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: GridView.count(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 2.2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      _StockLogoButton(
-                        icon: Icons.apple,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StockDetailPage(
-                              symbol: 'AAPL',
-                              name: 'Apple Inc',
+                if (marketProvider.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: marketProvider.trendingStocks.take(6).map((
+                        stock,
+                      ) {
+                        final isUp = stock["isUp"] as bool;
+                        final change = stock["change"] ?? 0.0;
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => StockDetailPage(
+                                  symbol: stock["symbol"],
+                                  name: stock["name"],
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width:
+                                (MediaQuery.of(context).size.width -
+                                    2 * 16.0 -
+                                    2 * 12.0) /
+                                3,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF313338),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  stock["symbol"],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  CurrencyProvider.formatCurrency(
+                                    context,
+                                    stock["price"],
+                                  ),
+                                  style: TextStyle(
+                                    color: isUp
+                                        ? Color(0xFF22C55E)
+                                        : Color(0xFFEF4444),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '${isUp ? '+' : ''}${change.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: isUp
+                                        ? Color(0xFF22C55E)
+                                        : Color(0xFFEF4444),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ),
-                      _StockLogoButton(
-                        icon: Icons.g_mobiledata,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StockDetailPage(
-                              symbol: 'GOOGL',
-                              name: 'Alphabet Inc',
-                            ),
-                          ),
-                        ),
-                      ),
-                      _StockLogoButton(
-                        icon: Icons.window,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StockDetailPage(
-                              symbol: 'MSFT',
-                              name: 'Microsoft Corp',
-                            ),
-                          ),
-                        ),
-                      ),
-                      _StockLogoButton(
-                        icon: Icons.memory,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StockDetailPage(
-                              symbol: 'NVDA',
-                              name: 'NVIDIA Corp',
-                            ),
-                          ),
-                        ),
-                      ),
-                      _StockLogoButton(
-                        icon: Icons.shopping_bag,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StockDetailPage(
-                              symbol: 'AMZN',
-                              name: 'Amazon.com Inc',
-                            ),
-                          ),
-                        ),
-                      ),
-                      _StockLogoButton(
-                        icon: Icons.currency_bitcoin,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StockDetailPage(
-                              symbol: 'BTC-USD',
-                              name: 'Bitcoin',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                        );
+                      }).toList(),
+                    ),
                   ),
-                ),
                 const SizedBox(height: 16),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _StockLogoButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _StockLogoButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF313338),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(child: Icon(icon, size: 40, color: Colors.white)),
       ),
     );
   }

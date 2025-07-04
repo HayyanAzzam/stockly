@@ -5,7 +5,7 @@ import 'screens/welcome_page.dart';
 import 'screens/login_page.dart';
 import 'screens/home_page.dart';
 import 'providers/portfolio_provider.dart';
-import 'state/app_state.dart';
+import 'providers/market_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'providers/currency_provider.dart';

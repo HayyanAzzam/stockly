@@ -107,14 +107,59 @@ class FinnhubService {
     return [];
   }
 
-  // Fetch general market news
+  // Fetch general market news, filtered for stock/market relevance
   Future<List<Map<String, dynamic>>> fetchGeneralNews() async {
     final url = Uri.parse('$_baseUrl/news?category=general&token=$_apiKey');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       if (data is List) {
-        return List<Map<String, dynamic>>.from(data);
+        final keywords = [
+          'stock',
+          'stocks',
+          'market',
+          'shares',
+          'earnings',
+          'company',
+          'merger',
+          'acquisition',
+          'ipo',
+          'etf',
+          'dividend',
+          'nasdaq',
+          's&p',
+          'dow',
+          'nyse',
+          'buy',
+          'sell',
+          'analyst',
+          'forecast',
+          'profit',
+          'loss',
+          'revenue',
+          'financial',
+          'investment',
+          'portfolio',
+          'quarter',
+          'guidance',
+          'outlook',
+          'trading',
+          'investor',
+          'fund',
+          'index',
+          'indices',
+          'bond',
+          'split',
+          'upgrade',
+          'downgrade',
+        ];
+        return List<Map<String, dynamic>>.from(data).where((article) {
+          final headline = (article['headline'] ?? '').toString().toLowerCase();
+          final summary = (article['summary'] ?? '').toString().toLowerCase();
+          return keywords.any(
+            (kw) => headline.contains(kw) || summary.contains(kw),
+          );
+        }).toList();
       }
     }
     return [];
@@ -152,5 +197,114 @@ class FinnhubService {
       return data;
     }
     return null;
+  }
+
+  // Fetch market indices (major North American indices)
+  Future<List<Map<String, dynamic>>> fetchMarketIndices(
+    BuildContext context,
+  ) async {
+    // Use ETF tickers for free quotes
+    final List<Map<String, String>> indices = [
+      {'symbol': 'SPY', 'name': 'S&P 500 ETF'},
+      {'symbol': 'QQQ', 'name': 'NASDAQ 100 ETF'},
+      {'symbol': 'DIA', 'name': 'Dow Jones ETF'},
+      {'symbol': 'IWM', 'name': 'Russell 2000 ETF'},
+      {'symbol': 'VIXY', 'name': 'VIX ETF'},
+      {'symbol': 'TLT', 'name': '20Y Treasury ETF'},
+    ];
+
+    final List<Map<String, dynamic>> results = [];
+
+    for (final index in indices) {
+      final symbol = index['symbol']!;
+      final name = index['name']!;
+      final quote = await fetchQuote(symbol, context);
+      if (quote != null) {
+        final currentPrice = (quote['c'] as num?)?.toDouble() ?? 0.0;
+        final prevClose = (quote['pc'] as num?)?.toDouble() ?? 0.0;
+        final change = currentPrice - prevClose;
+        results.add({
+          'symbol': symbol,
+          'name': name,
+          'price': currentPrice,
+          'change': change,
+          'isUp': change >= 0,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  // Fetch trending stocks (most active stocks)
+  Future<List<Map<String, dynamic>>> fetchTrendingStocks(
+    BuildContext context,
+  ) async {
+    final url = Uri.parse('$_baseUrl/stock/symbol?exchange=US&token=$_apiKey');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data is List && data.isNotEmpty) {
+        // Take a subset of popular stocks for trending
+        final List<String> popularStocks = [
+          'AAPL',
+          'GOOGL',
+          'MSFT',
+          'AMZN',
+          'NVDA',
+          'TSLA',
+          'META',
+          'NFLX',
+          'ADBE',
+          'CRM',
+          'PYPL',
+          'INTC',
+        ];
+
+        final List<Map<String, dynamic>> results = [];
+
+        for (final symbol in popularStocks) {
+          final quote = await fetchQuote(symbol, context);
+          final profile = await fetchCompanyProfile(symbol);
+
+          if (quote != null && profile != null) {
+            final currentPrice = (quote['c'] as num?)?.toDouble() ?? 0.0;
+            final prevClose = (quote['pc'] as num?)?.toDouble() ?? 0.0;
+            final change = currentPrice - prevClose;
+
+            results.add({
+              'symbol': symbol,
+              'name': profile['name'] ?? symbol,
+              'logo': profile['logo'],
+              'price': currentPrice,
+              'change': change,
+              'isUp': change >= 0,
+            });
+          }
+        }
+
+        return results;
+      }
+    }
+
+    return [];
+  }
+
+  // Fetch news for a specific stock symbol
+  Future<List<Map<String, dynamic>>> fetchStockNews(String symbol) async {
+    final now = DateTime.now();
+    final from = DateTime(now.year, now.month - 1, now.day); // last month
+    final url = Uri.parse(
+      '$_baseUrl/company-news?symbol=$symbol&from=${from.toIso8601String().substring(0, 10)}&to=${now.toIso8601String().substring(0, 10)}&token=$_apiKey',
+    );
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(data);
+      }
+    }
+    return [];
   }
 }

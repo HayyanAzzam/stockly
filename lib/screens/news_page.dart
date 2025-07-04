@@ -52,7 +52,62 @@ class _NewsPageState extends State<NewsPage> {
               ),
             );
           }
-          final newsList = snapshot.data!;
+          final keywords = [
+            'stock',
+            'stocks',
+            'market',
+            'shares',
+            'earnings',
+            'company',
+            'merger',
+            'acquisition',
+            'ipo',
+            'etf',
+            'dividend',
+            'nasdaq',
+            's&p',
+            'dow',
+            'nyse',
+            'buy',
+            'sell',
+            'analyst',
+            'forecast',
+            'profit',
+            'loss',
+            'revenue',
+            'financial',
+            'investment',
+            'portfolio',
+            'quarter',
+            'guidance',
+            'outlook',
+            'trading',
+            'investor',
+            'fund',
+            'index',
+            'indices',
+            'bond',
+            'split',
+            'upgrade',
+            'downgrade',
+          ];
+          final newsList = snapshot.data!.where((article) {
+            final headline = (article['headline'] ?? '')
+                .toString()
+                .toLowerCase();
+            final summary = (article['summary'] ?? '').toString().toLowerCase();
+            return keywords.any(
+              (kw) => headline.contains(kw) || summary.contains(kw),
+            );
+          }).toList();
+          if (newsList.isEmpty) {
+            return Center(
+              child: Text(
+                'No news available',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
+          }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: newsList.length,

@@ -27,7 +27,7 @@ class RegisterPageState extends State<RegisterPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.show_chart, size: 40, color: Colors.green[400]),
+              Image.asset('assets/logo.png', width: 200, height: 200),
               const SizedBox(height: 24),
               const Text(
                 'Stockly',

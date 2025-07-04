@@ -182,28 +182,28 @@ class _CartPageState extends State<CartPage> {
                         ),
                         onPressed: cartProvider.items.isEmpty
                             ? null
-                            : () async {
+                            : () {
                                 final portfolioProvider =
                                     Provider.of<PortfolioProvider>(
                                       context,
                                       listen: false,
                                     );
-                                final marketProvider =
-                                    Provider.of<MarketProvider>(
-                                      context,
-                                      listen: false,
-                                    );
-                                final finnhubService = FinnhubService();
-                                for (final item in cartProvider.items) {
+                                final items = List<CartItem>.from(
+                                  cartProvider.items,
+                                );
+                                final scaffoldMessenger = ScaffoldMessenger.of(
+                                  context,
+                                );
+
+                                // Process all cart items
+                                for (final item in items) {
                                   if (item.type == 'buy') {
-                                    final profile = await finnhubService
-                                        .fetchCompanyProfile(item.symbol);
                                     portfolioProvider.buyStock(
                                       item.symbol,
                                       item.price,
                                       item.shares,
-                                      name: profile?['name'],
-                                      logo: profile?['logo'],
+                                      name: item.name,
+                                      logo: null,
                                     );
                                   } else {
                                     portfolioProvider.sellStock(
@@ -213,19 +213,16 @@ class _CartPageState extends State<CartPage> {
                                     );
                                   }
                                 }
-                                // Fetch latest prices and update portfolio value
-                                await marketProvider.fetchMarketStocks(context);
-                                portfolioProvider
-                                    .updatePortfolioValueFromMarket(
-                                      marketProvider.marketStocks,
-                                    );
+
                                 cartProvider.clear();
-                                ScaffoldMessenger.of(context).showSnackBar(
+
+                                // Show success message only
+                                scaffoldMessenger.showSnackBar(
                                   const SnackBar(
                                     content: Text('Checkout successful!'),
+                                    backgroundColor: Color(0xFF22C55E),
                                   ),
                                 );
-                                Navigator.pop(context);
                               },
                         child: const Text(
                           'Checkout',

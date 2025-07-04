@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/home_page.dart';
 
 class CartItem {
   final String symbol;
@@ -19,24 +20,28 @@ class CartItem {
 }
 
 class CartProvider extends ChangeNotifier {
-  final List<CartItem> _items = [];
+  final Map<String, List<CartItem>> _carts = {};
+  String get _user => UserSession.email ?? 'guest';
 
-  List<CartItem> get items => List.unmodifiable(_items);
+  List<CartItem> get items => List.unmodifiable(_carts[_user] ?? []);
 
   void addItem(CartItem item) {
-    _items.add(item);
+    _carts.putIfAbsent(_user, () => []);
+    _carts[_user]!.add(item);
     notifyListeners();
   }
 
   void removeItem(CartItem item) {
-    _items.remove(item);
+    _carts[_user]?.remove(item);
     notifyListeners();
   }
 
   void clear() {
-    _items.clear();
+    _carts[_user]?.clear();
     notifyListeners();
   }
 
-  double get total => _items.fold(0.0, (sum, item) => sum + item.total);
+  double get total => (_carts[_user] != null)
+      ? _carts[_user]!.fold(0.0, (sum, item) => sum + item.total)
+      : 0.0;
 }
