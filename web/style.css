@@ -3,8 +3,8 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-family: 'Inter', sans-serif;
-    overflow-x: hidden; /* Prevent horizontal scrolling */
-    overflow-y: auto;   /* Allow vertical scrolling */
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* --- Reusable Components & Utilities --- */
@@ -15,43 +15,40 @@ body {
 .w-10 { width: 2.5rem; height: 2.5rem; }
 .w-16 { width: 4rem; height: 4rem; }
 .w-20 { width: 5rem; height: 5rem; }
-.user-avatar { width: 48px; height: 48px; }
-.user-avatar-large { width: 80px; height: 80px; }
+.user-avatar { width: 48px; height: 48px; object-fit: cover; }
+.user-avatar-large { width: 80px; height: 80px; object-fit: cover; }
 .asset-logo { width: 40px; height: 40px; object-fit: contain; }
 .h-mobile-nav { height: 80px; }
 .small-text { font-size: 0.75rem; }
-.card-link { text-decoration: none; }
+.payment-icon { height: 25px; object-fit: contain; }
+
 
 /* --- Page Transitions & Layout --- */
 .page {
     width: 100%;
     min-height: 100vh;
     transition: opacity 0.3s ease-in-out;
-    display: none; /* Hide pages by default */
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
 }
 .page.active {
-    display: flex; /* Show the active page */
+    display: flex;
 }
-
-/* On large screens, home-page has specific alignment */
 #home-page.page.active {
     align-items: stretch;
 }
-
 .scrollable-content {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 .scrollable-content::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, and Opera */
+    display: none;
 }
 .main-content-area { display: none; }
-.main-content-area:first-of-type { display: block; }
 
-/* --- Custom Bootstrap Colors --- */
+/* --- Custom Bootstrap Colors & Theme --- */
 .btn-brand-green {
     --bs-btn-color: #fff;
     --bs-btn-bg: #22c55e;
@@ -72,23 +69,27 @@ body {
     --bs-btn-active-bg: #ca2424;
     --bs-btn-active-border-color: #B52121;
 }
+.btn-brand-gold {
+    --bs-btn-color: #212529;
+    --bs-btn-bg: #f59e0b;
+    --bs-btn-border-color: #f59e0b;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #d97706;
+    --bs-btn-hover-border-color: #b45309;
+    --bs-btn-active-bg: #b45309;
+    --bs-btn-active-border-color: #92400e;
+}
+
+
 .text-brand-green { color: #22c55e !important; }
 .text-brand-red { color: #ef4444 !important; }
 .text-brand-amber { color: #f59e0b !important; }
-
-
-.bg-brand-green-light { background-color: rgba(34, 197, 94, 0.1); }
-.bg-brand-red-light { background-color: rgba(239, 68, 68, 0.1); }
-
-[data-bs-theme="dark"] .bg-brand-green-light { background-color: rgba(34, 197, 94, 0.2); }
-[data-bs-theme="dark"] .bg-brand-red-light { background-color: rgba(239, 68, 68, 0.2); }
 
 /* --- Form & Nav Overrides --- */
 .form-control:focus, .form-select:focus {
     border-color: #22c55e;
     box-shadow: 0 0 0 0.25rem rgba(34, 197, 94, 0.25);
 }
-
 .nav-pills .nav-link, .nav-link {
     color: var(--bs-secondary-color);
 }
@@ -103,11 +104,15 @@ body {
 /* --- Charting --- */
 .chart-container-large {
     height: 256px;
+    position: relative;
 }
 
-#portfolio-chart-container {
-    height: 250px;
-    margin-bottom: 1rem;
+/* **FIXED** Rule for chart controls */
+.chart-controls {
+    position: relative;
+    top: 0.4rem;
+    right: 0.4rem;
+    z-index: 10;
 }
 
 
@@ -121,6 +126,7 @@ body {
     background-color: var(--bs-tertiary-bg);
     border-radius: 1rem;
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    text-decoration: none;
 }
 .stock-logo-card:hover {
     transform: translateY(-4px);
@@ -131,87 +137,13 @@ body {
     max-width: 100%;
     object-fit: contain;
 }
-[data-bs-theme="dark"] .stock-logo-card img {
-    filter: invert(0.9) brightness(1.2);
-}
-/* Don't invert logos that already have color */
-[data-bs-theme="dark"] .stock-logo-card img[alt="Google"],
-[data-bs-theme="dark"] .stock-logo-card img[alt="Microsoft"],
-[data-bs-theme="dark"] .stock-logo-card img[alt="Nvidia"],
-[data-bs-theme="dark"] .stock-logo-card img[alt="Bitcoin"] {
-    filter: none; 
-}
-[data-bs-theme="light"] .stock-logo-card img[alt="Amazon"],
-[data-bs-theme="light"] .stock-logo-card img[alt="Apple"]{
+[data-bs-theme="dark"] .stock-logo-card img[alt~="Apple"],
+[data-bs-theme="dark"] .stock-logo-card img[alt~="Amazon"],
+[data-bs-theme="dark"] .stock-logo-card img[alt~="Tesla"] {
     filter: invert(1);
 }
 
-/* --- Recommended Investment Placeholder Cards --- */
-.recommendation-card {
-    height: 100px;
-    background-color: var(--bs-tertiary-bg);
-    border-radius: 1rem;
-    filter: blur(5px);
-    -webkit-filter: blur(5px);
-    opacity: 0.5;
-    background-image: linear-gradient(
-        45deg,
-        rgba(255, 255, 255, 0.05) 25%,
-        transparent 25%,
-        transparent 50%,
-        rgba(255, 255, 255, 0.05) 50%,
-        rgba(255, 255, 255, 0.05) 75%,
-        transparent 75%,
-        transparent
-    );
-}
-
-/* --- Payment Page --- */
-.payment-icon {
-    width: 40px;
-    height: 25px;
-    object-fit: contain;
-    border-radius: 4px;
-}
-#buy-now-btn {
-    --bs-btn-color: #fff;
-    --bs-btn-bg: #22c55e;
-    --bs-btn-border-color: #22c55e;
-    --bs-btn-hover-color: #fff;
-    --bs-btn-hover-bg: #16a34a;
-    --bs-btn-hover-border-color: #159544;
-}
-
-#payment-yearly-plan .display-4 {
-    color: #f59e0b;
-}
-
-#payment-page .list-group-item {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-}
-
-/* --- Trade Modal specific styles --- */
-#trade-shares.is-invalid {
-    border-color: #dc3545;
-}
-.invalid-feedback {
-    display: none;
-    width: 100%;
-    margin-top: 0.25rem;
-    font-size: .875em;
-    color: #dc3545;
-}
-#trade-shares.is-invalid ~ .invalid-feedback {
-    display: block;
-}
-
-/* Admin Page Styles */
-#admin-page {
-    padding: 2rem;
-}
-
-/* Shopping Cart Styles */
+/* --- Shopping Cart --- */
 #cart-content .cart-item {
     display: flex;
     justify-content: space-between;
@@ -225,4 +157,48 @@ body {
 #cart-total {
     font-weight: bold;
     font-size: 1.25rem;
+}
+
+/* --- Market Index Card Styles --- */
+a.index-card {
+    display: block;
+    text-decoration: none;
+}
+.index-card {
+    padding: 1rem;
+    border-radius: 0.75rem;
+    color: #fff;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.index-card:hover {
+    transform: translateY(-3px);
+}
+.index-card.positive {
+    background-color: #16a34a;
+}
+.index-card.negative {
+    background-color: #dc2626;
+}
+.index-card .index-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    opacity: 0.9;
+}
+.index-card .index-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+.index-card .index-change {
+    font-size: 0.875rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* --- Portfolio Page Styles --- */
+.portfolio-summary-card {
+    background-color: var(--bs-tertiary-bg);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    height: 100%;
 }

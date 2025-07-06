@@ -1,87 +1,82 @@
-// This file handles all authentication logic
+// --- AUTHENTICATION FUNCTIONS ---
 
-function initAuth(onAuthStateChangedCallback) {
-    auth.onAuthStateChanged(onAuthStateChangedCallback);
-}
-
-async function handleRegister(event) {
-    event.preventDefault();
-    const name = document.getElementById('register-name').value;
-    const email = document.getElementById('register-email').value;
-    const password = document.getElementById('register-password').value;
-
+/**
+ * Handles user registration using Firebase Auth.
+ * @param {string} email - The user's email.
+ * @param {string} password - The user's password.
+ * @param {string} fullName - The user's full name.
+ * @param {string|null} location - The user's detected location.
+ */
+async function handleRegister(email, password, fullName, location) {
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
-        await createUserInDB(user.uid, name, email);
-        // The onAuthStateChanged listener in script.js will handle the rest.
+        
+        const isAdmin = false; 
+
+        await db.collection('users').doc(user.uid).set({
+            uid: user.uid,
+            fullName: fullName,
+            email: email,
+            cash: 100000, // Starting cash for new users
+            isPro: false,
+            isAdmin: isAdmin,
+            portfolio: [],
+            wishlist: [],
+            location: location || 'Unknown' // Save the detected location
+        });
+
+        showAppToast(`Welcome, ${fullName}! Your account has been created.`, 'success');
+        
     } catch (error) {
-        alert(`Registration failed: ${error.message}`);
-        console.error("Registration error:", error);
+        console.error("Registration Error:", error);
+        showAppToast(`Error: ${error.message}`, 'error');
     }
 }
 
-async function handleLogin(event) {
-    event.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-
+/**
+ * Handles user login using Firebase Auth.
+ * @param {string} email - The user's email.
+ * @param {string} password - The user's password.
+ */
+async function handleLogin(email, password) {
     try {
         await auth.signInWithEmailAndPassword(email, password);
-        // The onAuthStateChanged listener in script.js will handle the rest.
     } catch (error) {
-        alert(`Login failed: ${error.message}`);
-        console.error("Login error:", error);
+        console.error("Login Error:", error);
+        showAppToast(`Error: ${error.message}`, 'error');
     }
 }
 
+/**
+ * Handles user logout.
+ */
 async function handleLogout() {
     try {
         await auth.signOut();
-        // The onAuthStateChanged listener will redirect to the welcome page.
-        state.user = null;
-        navigateToPage('welcome-page');
+        showAppToast('You have been successfully logged out.', 'info');
     } catch (error) {
-        console.error("Logout error:", error);
+        console.error("Logout Error:", error);
+        showAppToast(`Error: ${error.message}`, 'error');
     }
 }
 
-async function handleProfileUpdate(event) {
-    event.preventDefault();
-    const newFullName = document.getElementById('fullName').value;
-    const newPassword = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-
+/**
+ * Handles updating the user's password in Firebase Auth.
+ * @param {string} newPassword - The new password.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+async function handleUpdatePassword(newPassword) {
     try {
-        // Update full name in Firestore
-        if (newFullName !== state.user.fullName) {
-            await updateUserInDB(auth.currentUser.uid, { fullName: newFullName });
-            state.user.fullName = newFullName;
-            document.getElementById('dashboard-username').innerText = newFullName;
-             alert("Profile updated successfully!");
+        const user = auth.currentUser;
+        if (!user) {
+            throw new Error("No user is signed in.");
         }
-
-        // Update password in Firebase Auth
-        if (newPassword) {
-            if (newPassword !== confirmPassword) {
-                alert("Passwords do not match.");
-                return;
-            }
-            await auth.currentUser.updatePassword(newPassword);
-            alert("Password updated successfully!");
-        }
-
-        showMainContent('profile-content');
-
+        await user.updatePassword(newPassword);
+        return true;
     } catch (error) {
-        alert(`Update failed: ${error.message}`);
-        console.error("Profile update error:", error);
+        console.error("Password Update Error:", error);
+        showAppToast(`Error: ${error.message}. Please log out and log back in to update your password.`, 'error');
+        return false;
     }
 }
-
-
-// Add listeners after DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('register-form').addEventListener('submit', handleRegister);
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
-});

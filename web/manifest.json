@@ -1,11 +1,11 @@
 {
-    "name": "stockly",
-    "short_name": "stockly",
+    "name": "Stockly",
+    "short_name": "Stockly",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1A202C",
+    "theme_color": "#22C55E",
+    "description": "A web application for tracking stocks and managing investment portfolios.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
