@@ -235,6 +235,3 @@ You can paste this directly into your `README.md` file in VS Code. Let me know i
 
 We’d love to hear your thoughts or suggestions. Feel free to open an [issue](https://github.com/your-repo/issues) or submit a pull request.
 
----
-
-Let me know if you'd like a version with badges (e.g., build status, license, etc.) or project screenshots.
